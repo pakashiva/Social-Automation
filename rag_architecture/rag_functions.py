@@ -7,6 +7,7 @@ load_dotenv()
 
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
@@ -14,11 +15,17 @@ from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 
+# ollma
+from langchain_ollama import ChatOllama , OllamaEmbeddings
+
 # Retrieval
 
-from langchain_classic.retrievers import ContextualCompressionRetriever,BM25Retriever,EnsembleRetriever
+from langchain_classic.retrievers import BM25Retriever,EnsembleRetriever
 from langchain_classic.retrievers import MultiQueryRetriever
 from langchain_classic.retrievers.contextual_compression import (
+    ContextualCompressionRetriever,
+)
+from langchain_classic.retrievers.document_compressors import (
     CrossEncoderReranker,
 )
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
@@ -38,14 +45,23 @@ FINAL_K = 5
 
 # Embeddings
 
-embeddings = OpenAIEmbeddings(
-    model=EMBEDDING_MODEL
+# embeddings = OpenAIEmbeddings(
+#     model=EMBEDDING_MODEL
+# )
+
+embeddings = OllamaEmbeddings(
+    model = 'nomic-embed-text:latest'
 )
 
 # LLM
 
-llm = ChatOpenAI(
-    model=LLM_MODEL,
+# llm = ChatOpenAI(
+#     model=LLM_MODEL,
+#     temperature=0
+# )
+
+llm = ChatOllama(
+    model='llama3.2:latest' , 
     temperature=0
 )
 
@@ -255,11 +271,9 @@ def create_retriever(
     hybrid = build_hybrid_retriever(
         vectorstore
     )
-
     multi_query = build_multi_query_retriever(
         hybrid
     )
-
     compression = build_contextual_compression_retriever(
         multi_query
     )
@@ -287,3 +301,81 @@ def format_docs(
         doc.page_content
         for doc in docs
     )
+
+# Prompt Template
+
+RAG_PROMPT = ChatPromptTemplate.from_template(
+"""
+You are an AI assistant for the company.
+Answer ONLY using the provided context.
+If the answer is not present in the context, simply reply:
+"I don't have enough information in the company documents."
+Do not make up information.
+
+------------------------
+Context:
+{context}
+------------------------
+
+Question:
+{question}
+
+Answer:
+"""
+)
+
+# LCEL RAG Chain
+
+def create_rag_chain(retriever):
+    chain = (
+        {
+            "context": retriever | format_docs,
+            "question": RunnablePassthrough(),
+        }
+        | RAG_PROMPT
+        | llm
+        | StrOutputParser()
+    )
+    return chain
+
+# Build Entire RAG System
+
+def initialize_rag():
+
+    print("\nInitializing RAG System...\n")
+    vectorstore = get_vectorstore()
+    retriever = create_retriever(vectorstore)
+    rag_chain = create_rag_chain(retriever)
+    print("\nRAG Ready!\n")
+    return rag_chain
+
+
+# Ask Question
+
+def ask_question(
+    rag_chain,
+    question,
+):
+    answer = rag_chain.invoke(question)
+    return answer
+
+# Debug Retrieval
+
+def inspect_retrieval(
+        question,
+):
+    vectorstore = get_vectorstore()
+    retriever = create_retriever(
+        vectorstore
+    )
+
+    docs = retriever.invoke(
+        question
+    )
+    print("\nRetrieved Documents:\n")
+    for i, doc in enumerate(docs, start=1):
+        print("=" * 80)
+        print(f"Chunk {i}")
+        print("=" * 80)
+        print(doc.page_content)
+        print("\n")
