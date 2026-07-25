@@ -1,0 +1,55 @@
+{
+    "company_name": "NexaVision Technologies",
+    "pillars": [
+        {
+            "name": "Product Education & Tutorials",
+            "weight": 25
+        },
+        {
+            "name": "AI & Technology Insights",
+            "weight": 20
+        },
+        {
+            "name": "Customer Challenges & Solutions",
+            "weight": 15
+        },
+        {
+            "name": "Thought Leadership & Industry Expertise",
+            "weight": 10
+        },
+        {
+            "name": "Case Studies & Customer Success",
+            "weight": 10
+        },
+        {
+            "name": "Product Updates & Feature Releases",
+            "weight": 5
+        },
+        {
+            "name": "Company Culture & Team",
+            "weight": 5
+        },
+        {
+            "name": "Events, Webinars & Industry News",
+            "weight": 5
+        },
+        {
+            "name": "Promotional Offers & Demo Campaigns",
+            "weight": 5
+        }
+    ],
+    "tone": {
+        "overall": "Professional & Trustworthy",
+        "writing_style": "Clear, Concise & Educational",
+        "personality": "Helpful, Knowledgeable & Innovative",
+        "technical_depth": "Medium to High (Enterprise Audience)",
+        "language": "Simple, Business-Friendly English",
+        "cta": "Consultative (Demo, Learn More, Contact Us)",
+        "avoid": [
+            "Clickbait",
+            "hype",
+            "slang",
+            "overly sales-heavy messaging"
+        ]
+    }
+}
