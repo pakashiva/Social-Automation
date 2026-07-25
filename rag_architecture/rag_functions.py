@@ -14,7 +14,6 @@ from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 
-
 # Retrieval
 
 from langchain_classic.retrievers import ContextualCompressionRetriever,BM25Retriever,EnsembleRetriever
@@ -27,9 +26,9 @@ from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 
 # Configuration
 
-PDF_PATH = "data/company_docs.pdf"
+PDF_PATH = "data/company_profile.pdf"
 CHROMA_PATH = "databases/chromadb"
-COLLECTION_NAME = "company_documents"
+COLLECTION_NAME = "company_documents"  # like table names in SQL
 EMBEDDING_MODEL = "text-embedding-3-small"
 LLM_MODEL = "gpt-4.1"
 CHUNK_SIZE = 1000
@@ -39,11 +38,9 @@ FINAL_K = 5
 
 # Embeddings
 
-
 embeddings = OpenAIEmbeddings(
     model=EMBEDDING_MODEL
 )
-
 
 # LLM
 
@@ -98,7 +95,6 @@ def create_vectorstore(chunks: List[Document]):
     )
 
     print("Created Chroma database")
-
     return vectorstore
 
 # Load Existing Chroma
@@ -120,18 +116,19 @@ def load_vectorstore():
 
 def get_vectorstore():
 
-    chroma_exists = (
-        Path(CHROMA_PATH).exists()
-        and any(Path(CHROMA_PATH).iterdir())
+    vectorstore = Chroma(
+        collection_name=COLLECTION_NAME,
+        embedding_function=embeddings,
+        persist_directory=CHROMA_PATH,
     )
 
-    if chroma_exists:
-
-        return load_vectorstore()
-
-    print("No Chroma database found")
-    documents = load_pdf()
-    chunks = split_documents(documents)
+    if vectorstore._collection.count() > 0:
+        print("Loaded existing Chroma Database")
+        return vectorstore
+    
+    print("Creating new Chroma Database")
+    docs = load_pdf()
+    chunks = split_documents(docs)
     return create_vectorstore(chunks)
 
 # Build BM25 Retriever
@@ -193,33 +190,6 @@ def build_hybrid_retriever(
 
     return hybrid
 
-
-# Multi Query Prompt
-
-MULTI_QUERY_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-
-            """
-You are an expert query expansion assistant.
-Generate FIVE different search queries.
-
-Each query should retrieve
-different relevant information.
-
-Only return the queries.
-One query per line.
-Do not number them.
-            """
-),
-        (
-            "human",
-            "{question}"
-        ),
-    ]
-)
-
 # Multi Query Retriever
 
 def build_multi_query_retriever(
@@ -230,7 +200,6 @@ def build_multi_query_retriever(
     multi = MultiQueryRetriever.from_llm(
         retriever=hybrid_retriever,
         llm=llm,
-        prompt=MULTI_QUERY_PROMPT,
     )
     return multi
 
@@ -246,28 +215,6 @@ def retrieve_documents(
     print(f"\nRetrieved {len(docs)} documents")
     return docs
 
-# Complete Retrieval Pipeline
-
-def create_retriever(
-    vectorstore: Chroma,
-):
-
-    hybrid = build_hybrid_retriever(vectorstore)
-    multi = build_multi_query_retriever(hybrid)
-    return multi
-
-# Cross Encoder Model
-
-def load_cross_encoder():
-    """
-    Load HuggingFace Cross Encoder.
-    """
-    print("Loading Cross Encoder...")
-    model = HuggingFaceCrossEncoder(
-        model_name="BAAI/bge-reranker-base"
-    )
-    return model
-
 # Cross Encoder Reranker
 
 def build_reranker():
@@ -275,7 +222,10 @@ def build_reranker():
     Re-rank retrieved documents and keep top FINAL_K.
     """
 
-    cross_encoder = load_cross_encoder()
+    cross_encoder = HuggingFaceCrossEncoder(
+        model_name="BAAI/bge-reranker-base"
+    )
+
     reranker = CrossEncoderReranker(
         model=cross_encoder,
         top_n=FINAL_K,
@@ -283,7 +233,6 @@ def build_reranker():
     return reranker
 
 # Contextual Compression Retriever
-
 
 def build_contextual_compression_retriever(
     base_retriever,
