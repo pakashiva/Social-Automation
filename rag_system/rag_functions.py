@@ -34,7 +34,8 @@ from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 # Configuration
 
 PDF_PATH = "data/company_profile.pdf"
-CHROMA_PATH = "databases/chromadb"
+BASE_DIR = Path(__file__).resolve().parent.parent
+CHROMA_PATH = BASE_DIR / "databases" / "chromadb"
 COLLECTION_NAME = "company_documents"  # like table names in SQL
 EMBEDDING_MODEL = "text-embedding-3-small"
 LLM_MODEL = "gpt-4.1"
