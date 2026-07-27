@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from strategy_schema import Strategy
+from planner.strategy_schema import Strategy
 from langchain_ollama import ChatOllama
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.messages import SystemMessage , HumanMessage
@@ -65,7 +65,7 @@ def save_json_data(file_path):
 
     data = structured_llm.invoke(messages)
 
-    planner_dir = BASE_DIR / "planner"
+    planner_dir = BASE_DIR / "databases" / "strategy"
     planner_dir.mkdir(exist_ok=True)
     output_path = planner_dir / "strategy.json"
 
