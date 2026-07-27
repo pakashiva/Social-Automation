@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_ollama import ChatOllama
+from model import llm
 
 from agents.planner_agent.planner_prompt import SYSTEM_PROMPT
 from agents.planner_agent.planner_schema import PlannerOutput
@@ -13,10 +13,15 @@ from utils.strategy import load_strategy
 
 def get_planner_history():
     with app.app_context():
-        rows = PlannerHistory.query.all()
+        rows = (
+            PlannerHistory.query
+            .order_by(PlannerHistory.id.desc())
+            .limit(20)
+            .all()
+        )
 
         data = []
-        for row in rows:
+        for row in reversed(rows):
             data.append({
                 "pillar": row.pillar,
                 "topic": row.topic,
@@ -26,11 +31,6 @@ def get_planner_history():
         return data
 
 def load_planner():
-
-    llm = ChatOllama(
-        model='llama3.2:latest',
-        temperature=0
-    )
 
     planner = llm.with_structured_output(
         PlannerOutput

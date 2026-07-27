@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
-from planner.strategy_schema import Strategy
+from model import llm
+from pdf_to_json.strategy_schema import Strategy
 from langchain_ollama import ChatOllama
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.messages import SystemMessage , HumanMessage
@@ -42,13 +43,6 @@ Include
 
 Do not invent fields.
 """
-
-# defining llm
-
-llm = ChatOllama(
-    model = MODEL, 
-    temperature=0
-    )
 
 structured_llm = llm.with_structured_output(
         Strategy
