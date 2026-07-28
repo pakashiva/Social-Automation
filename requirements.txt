@@ -46,3 +46,6 @@ numpy>=2.3.2
 pandas>=2.3.2
 ```
 flask-sqlalchemy>=3.1.1
+
+# image handling
+cloudinary>=1.45.0
