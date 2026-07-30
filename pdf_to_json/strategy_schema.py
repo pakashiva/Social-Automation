@@ -1,20 +1,38 @@
-from pydantic import BaseModel ,Field
-
-class ContentPillar(BaseModel):
-    name : str = Field(description="Content pillar name")
-    weight : int=  Field(description="Percentage weight")
+from pydantic import BaseModel, Field
 
 
-class Tone(BaseModel):
-    overall: str
-    writing_style: str
-    personality: str
-    technical_depth: str
-    language: str
-    cta: str
-    avoid: list[str]
+# ----------------------------------------------------------
+# Pillar
+# ----------------------------------------------------------
+
+class Pillar(BaseModel):
+    name: str
+    allocation: int
+    objective: str
+    example_topics: list[str] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------
+# Brand Voice
+# ----------------------------------------------------------
+
+class BrandVoice(BaseModel):
+    traits: list[str] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------
+# Post Formats
+# ----------------------------------------------------------
+
+class PostFormats(BaseModel):
+    formats: list[str] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------
+# Final Strategy
+# ----------------------------------------------------------
 
 class Strategy(BaseModel):
-    company_name : str
-    pillars: list[ContentPillar]
-    tone: Tone
+    pillars: list[Pillar] = Field(default_factory=list)
+    brand_voice: BrandVoice = Field(default_factory=BrandVoice)
+    post_formats: PostFormats = Field(default_factory=PostFormats)

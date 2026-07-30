@@ -15,14 +15,19 @@ class PlannerOutput(BaseModel):
         description="The content pillar selected from the content strategy."
     )
 
-    tone: str = Field(
+    brand_voice: str = Field(
     description="The tone in which the content should be written, such as professional, casual, friendly, persuasive, witty, or authoritative."
+    )
+
+    post_format: str = Field(
+        description=(
+            "The exact post format selected from the company's content strategy that best "
+            "fits the planned content. Return only one format exactly as it appears in the "
+            "strategy (e.g., Explainer, Story, Mini case study, Workflow breakdown, "
+            "Checklist, Comparison, Myth vs Reality)."
+        )
     )
 
     objective: str = Field(
         description="The objective of the post, such as Educate, Promote, Engage, Build Trust, Generate Leads, etc."
-    )
-
-    audience: str = Field(
-        description="The primary target audience for the post."
     )

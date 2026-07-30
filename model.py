@@ -1,8 +1,8 @@
 from langchain_ollama import ChatOllama , OllamaEmbeddings
 
 llm = ChatOllama(
-    model = 'llama3.2:latest' , 
-    temperature= 0
+    model = 'qwen2.5:7b' , 
+    temperature= 0.3
 )
 
 embeddings = OllamaEmbeddings(
