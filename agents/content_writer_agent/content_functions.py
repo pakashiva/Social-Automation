@@ -1,9 +1,15 @@
-from model import llm
+
 from agents.content_writer_agent.content_prompt import FACEBOOK_PROMPT , INSTAGRAM_PROMPT , LINKEDIN_PROMPT
 from langchain_core.messages import HumanMessage , SystemMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+llm = ChatGoogleGenerativeAI(
+    model = 'gemini-2.5-flash',
+    temperature = 0.2
+)
 
 
-def generate_linkedin_content(topic , tone , audience , pillar , company_data):
+def generate_linkedin_content(topic , brand_voice , pillar  , post_format , pillar_guidlines):
     messages = [
     SystemMessage(content=LINKEDIN_PROMPT),
     HumanMessage(content=f"""
@@ -13,15 +19,15 @@ def generate_linkedin_content(topic , tone , audience , pillar , company_data):
     CONTENT PILLAR
     {pillar}
 
-    TONE
-    {tone}
+    BRAND VOICE
+    {brand_voice}
 
-    TARGET AUDIENCE
-    {audience}
+    POST FORMAT
+    {post_format}
 
-    COMPANY KNOWLEDGE
-    {company_data}
-        
+    PILLAR GUIDELINES
+    {pillar_guidlines}
+
     """)
     ]
 
@@ -29,9 +35,9 @@ def generate_linkedin_content(topic , tone , audience , pillar , company_data):
 
     return generated_content
 
-def generate_facebook_content(topic , tone , audience , pillar , company_data):
+def generate_facebook_content(topic , brand_voice , pillar  , post_format):
     messages = [
-    SystemMessage(content=FACEBOOK_PROMPT),
+    SystemMessage(content=LINKEDIN_PROMPT),
     HumanMessage(content=f"""
     TOPIC
     {topic}
@@ -39,21 +45,19 @@ def generate_facebook_content(topic , tone , audience , pillar , company_data):
     CONTENT PILLAR
     {pillar}
 
-    TONE
-    {tone}
+    BRAND VOICE
+    {brand_voice}
 
-    TARGET AUDIENCE
-    {audience}
+    POST FORMAT
+    {post_format}
 
-    COMPANY KNOWLEDGE
-    {company_data}
-        
     """)
     ]
 
     generated_content = llm.invoke(messages)
 
     return generated_content
+
 
 def generate_instagram_content(topic , tone , audience , pillar , company_data):
     messages = [

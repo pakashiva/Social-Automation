@@ -34,15 +34,15 @@ from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 
 # Configuration
 
-PDF_PATH = "data/company_profile.pdf"
+PDF_PATH = "data/pillar_info.pdf"
 BASE_DIR = Path(__file__).resolve().parent.parent
 CHROMA_PATH = BASE_DIR / "databases" / "chromadb"
-COLLECTION_NAME = "company_documents"  # like table names in SQL
+COLLECTION_NAME = "Pillars"  # like table names in SQL
 EMBEDDING_MODEL = "text-embedding-3-small"
 LLM_MODEL = "gpt-4.1"
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200
-TOP_K = 20
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 20
+TOP_K = 5
 FINAL_K = 5
 
 
@@ -267,4 +267,29 @@ def retrive_chunks(
         data += doc.page_content + '\n\n'
 
     return data
-        
+
+
+# ====================================================
+# hybrid retreiver only
+# ====================================================
+
+def create_semantic_retriever(vectorstore:Chroma):
+    hybrid = build_hybrid_retriever(
+            vectorstore
+        )
+
+    return hybrid
+
+def retrieve_semantic_chunks(pillar):
+    vectorstore = get_vectorstore()
+    retriever = create_semantic_retriever(vectorstore=vectorstore)
+
+    docs = retriever.invoke(
+            pillar
+        )
+    
+    data = ""
+    for i, doc in enumerate(docs, start=1):
+            data += doc.page_content + '\n\n'
+    
+    return data

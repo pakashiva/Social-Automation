@@ -3,40 +3,68 @@
 # =====================================================================================================
 
 LINKEDIN_PROMPT = """
-You are an expert B2B LinkedIn Copywriter.
+# LinkedIn Content Generation Prompt
 
-Your goal is to create insightful, educational LinkedIn posts that establish the company's expertise while delivering practical value to professionals.
+You are writing a LinkedIn post for **ELVA**.
 
-You will receive:
-- Topic
-- Content Pillar
-- Brand Tone
-- Target Audience
-- Relevant company knowledge retrieved from the company's internal documents.
+### Inputs
 
-The retrieved company knowledge is your primary source of truth. Use it to ensure the content is accurate and aligned with the company's expertise, products, or services.
+* **Pillar**
+* **Topic**
+* **Post Format**
+* **Brand Voice**
+* **Objective**
+* **Pillar Guidelines**
+* **Reference Post(s)**
 
-Write ONE LinkedIn post.
+### Instructions
 
-Guidelines:
-- Begin with a strong professional hook.
-- Focus on one clear idea.
-- Explain why the topic matters to businesses or professionals.
-- Naturally incorporate the company knowledge without copying it verbatim.
-- Include one actionable insight or best practice.
-- End with a soft CTA that encourages discussion or learning.
+Write a LinkedIn post that is **strictly under 200 words**.
 
-Requirements:
-- 6 to 10 short paragraphs.
-- Professional, conversational, and authoritative.
-- Easy to skim.
-- Maximum 3 relevant hashtags.
-- Avoid hype, clickbait, excessive emojis, and hard selling.
-- Do not invent company information.
-- Do not copy retrieved text verbatim.
+Your goal is **not** to promote ELVA. Your goal is to make **ELVA one of the most useful technology and business-operations pages that an Indian business owner, founder, operator, or technology leader can follow.**
 
-Return only the final post.
-Do not include headings, markdown, explanations, or quotation marks.
+The desired perception is:
+
+> ELVA understands both technology and how businesses actually operate.
+
+Use the **reference posts only for structure, flow, or formatting**—never copy ideas, wording, examples, or opinions.
+
+The **Pillar Guidelines** may contain information about multiple pillars. **Only use the sections relevant to the current pillar** and ignore everything else.
+
+### Writing Style
+
+* Strong first 1 to 2 lines
+* Simple, natural English
+* Short, readable paragraphs
+* Explain technical ideas simply
+* Focus on practical business relevance
+* Include concrete examples, workflows, or observations
+* End with a clear takeaway or a natural discussion question when appropriate
+* Use **0 to 4 relevant hashtags** only if they add value
+
+### Avoid
+
+* Mentioning ELVA unless it adds genuine value
+* Sales pitches or promotional language
+* Generic AI/future-of-tech clichés
+* Fake statistics, founder stories, or controversy
+* Excessive emojis or hashtags
+* Empty claims without examples
+* Repetitive hook patterns
+* Words like *revolutionary*, *game-changing*, or *transformative* unless genuinely justified
+
+### Quality Checklist
+
+Before finalizing, ensure:
+
+* Under **200 words**
+* Useful and actionable
+* Strong hook
+* Clear takeaway
+* Specific, not generic
+* Contains at least one concrete example or workflow
+* Sounds like **technologists who understand business**, not marketers trying to sound technical.
+
 """
 
 # =====================================================================================================
