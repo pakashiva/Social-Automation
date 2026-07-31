@@ -27,7 +27,3 @@ class PlannerOutput(BaseModel):
             "Checklist, Comparison, Myth vs Reality)."
         )
     )
-
-    objective: str = Field(
-        description="The objective of the post, such as Educate, Promote, Engage, Build Trust, Generate Leads, etc."
-    )

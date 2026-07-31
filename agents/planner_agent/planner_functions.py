@@ -2,9 +2,8 @@ import json
 from pathlib import Path
 
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.tools import tool
 
-from langgraph.graph import MessagesState
+from data.brand_context import elva_brand_context
 
 from model import llm
 from utils.strategy import load_strategy
@@ -15,7 +14,6 @@ from agents.planner_agent.init_db import app, db
 from agents.planner_agent.models import PlannerHistory
 
 
-@tool
 def get_previous_history():
 
     " Use this tool, to get previously chose pillar ,topics, post format , brand voice. "
@@ -51,7 +49,6 @@ def save_to_database(output):
         )
         db.session.commit()
 
-@tool
 def read_live_events():
 
     " Use this tool to read 'live_events.txt' file. And proceed as per the instructions"
@@ -62,7 +59,7 @@ def read_live_events():
     with open(filepath , "r" , encoding='utf-8') as f:
         return f.read()
 
-@tool
+
 def read_content_strategy():
     """ Use this tool to read the content strategy which contains 
    - Content pillars
@@ -76,30 +73,34 @@ def read_content_strategy():
     return json.dumps(load_strategy() , indent=4)
 
 
-tools = [read_live_events , read_content_strategy , get_previous_history]
-tool_llm = llm.bind_tools(tools=tools)
-
-def chatbot(state : MessagesState):
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT)
-        ] + state["messages"]
-
-    res = tool_llm.invoke(messages)
-    return {"messages" : [res]}
-
-# tools
-
-
 def load_planner():
 
     return llm.with_structured_output(PlannerOutput)
 
 
-def planner_output_node(state: MessagesState):
+def invoke_planner(feedback : str | None = None):
     planner = load_planner()
 
-    output = planner.invoke(state["messages"])
+    live_events = read_live_events()
+    previous_planned = get_previous_history()
+    content_strategy = read_content_strategy()
 
-    return {
-        "planner_output": output
-    }
+    messages = [
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMessage(content=f"Company Context:\n{elva_brand_context}"),
+        HumanMessage(content=f"Content Strategy:\n{content_strategy}"),
+        HumanMessage(content=f"Previous Planning History:\n{previous_planned}"),
+        HumanMessage(content=f"Live Events:\n{live_events}")
+    ]
+
+
+    if feedback:
+        messages.append(
+            HumanMessage(content=f"Planner Feedback:\n{feedback}")
+        )
+    
+    output = planner.invoke(messages)
+
+    return output
+
+
