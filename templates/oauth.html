@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Secure connections</p>
+        <h1>Connect Social Accounts</h1>
+        <p class="lead">Securely connect your social media platforms using OAuth. These connections allow automated publishing without storing your passwords.</p>
+    </div>
+</section>
+
+<section class="grid-three-buttons">
+    <article class="platform-card">
+        <div class="platform-card__icon platform-card__icon--linkedin"></div>
+        <h2>LinkedIn</h2>
+        <p>Connect your LinkedIn profile or company page for automated posting.</p>
+        <a href="/connect_linkedIn"><button class="button button--primary oauth-button">Connect LinkedIn</button></a>
+    </article>
+    <article class="platform-card">
+        <div class="platform-card__icon platform-card__icon--facebook"></div>
+        <h2>Facebook</h2>
+        <p>Authorize your Facebook Page for scheduled publishing.</p>
+        <button class="button button--primary oauth-button">Connect Facebook</button>
+    </article>
+    <article class="platform-card">
+        <div class="platform-card__icon platform-card__icon--instagram"></div>
+        <h2>Instagram</h2>
+        <p>Connect your Instagram Business account for automatic content publishing.</p>
+        <button class="button button--primary oauth-button">Connect Instagram</button>
+    </article>
+</section>
+{% endblock %}

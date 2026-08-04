@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Company information</p>
+        <h1>Company Information</h1>
+        <p class="lead">Provide strategic context and brand guidance to help the AI produce corporate-ready content.</p>
+    </div>
+</section>
+
+<form id="company-form" class="form-card">
+    <div class="form-section">
+        <div class="form-section__header">
+            <h2>Content Strategy</h2>
+            <p>Upload your organization's content strategy document. This helps the AI understand marketing objectives, audience, and messaging priorities.</p>
+        </div>
+        <label class="field-group">
+            <span>PDF Upload</span>
+            <input id="strategy-file" type="file" accept="application/pdf" required>
+            <span id="strategy-filename" class="field-note">No file selected</span>
+            <span id="strategy-error" class="field-error"></span>
+        </label>
+    </div>
+
+    <div class="form-section">
+        <div class="form-section__header">
+            <h2>Brand Context</h2>
+            <p>Describe your company, products, services, target audience, tone of voice, mission, competitors, and any important information that should guide AI-generated content.</p>
+        </div>
+        <label class="field-group field-group--textarea">
+            <span>Brand Context</span>
+            <textarea id="brand-context" rows="10" minlength="100" maxlength="10000" placeholder="Describe your company, products, services, target audience, tone of voice, mission, competitors, and any important information that should guide AI-generated content." required></textarea>
+            <div class="field-meta">
+                <span id="context-counter">0 / 10000</span>
+                <span id="context-error" class="field-error"></span>
+            </div>
+        </label>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="button button--primary">Save Company Data</button>
+    </div>
+</form>
+{% endblock %}
