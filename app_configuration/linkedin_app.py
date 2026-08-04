@@ -2,9 +2,11 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
+from agents.planner_agent.init_db import DATABASE_DIR
+
 load_dotenv()
 
-class LinkedIn_app_config:
+class Config:
     BASE_DIR = Path(__file__).resolve().parent.parent
 
     # Create the databases directory if it doesn't exist
@@ -15,3 +17,7 @@ class LinkedIn_app_config:
     SECRET_KEY = os.getenv("SECRET_KEY")
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{DATABASE_PATH}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    SQLALCHEMY_BINDS = {
+    "published": f"sqlite:///{DATABASE_DIR / 'published_posts.db'}"
+}

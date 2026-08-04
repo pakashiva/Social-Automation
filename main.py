@@ -1,12 +1,13 @@
 from flask import Flask, render_template , redirect
-from services.linkedin_services import (logging_in , retrive_auth_code , 
+from services.linkedin_services import (logging_in , retrive_auth_code , get_author_urn , 
                                         token_exchange, add_to_database)
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
 from pathlib import Path
-from app_configuration.linkedin_app import LinkedIn_app_config
+from app_configuration.linkedin_app import Config
 from init_db.linkedin_accounts.models import LinkedInAccount
+from init_db.published_posts.models import PublishedPost
 from app import db, app 
 
 load_dotenv()
@@ -43,8 +44,13 @@ def schedule():
 
 @app.route("/posts")
 def posts():
-    return render_page("posts.html", "Published Posts — CorpAI Media", "posts")
+    posts = PublishedPost.query.order_by(
+    PublishedPost.published_at.desc()
+).all()
 
+    return render_template(
+        "posts.html", title="Published Posts — CorpAI Media", active_page="posts", posts=posts
+    )
 
 # Connecting to the LinkedIN
 @app.route('/connect_linkedIn')
@@ -61,14 +67,20 @@ def callback():
         return str(e), 401
     
     try:
-        encrypted_token, expires_at = token_exchange(auth_code)
+        access_token, expires_at = token_exchange(auth_code)
+    except RuntimeError as e:
+        return str(e), 500
+
+    try:
+        author_urn = get_author_urn(access_token)
     except RuntimeError as e:
         return str(e), 500
 
     account = LinkedInAccount(
     company_name="ABC Company",
-    access_token=encrypted_token,
-    expires_at=expires_at
+    access_token=access_token,
+    author_urn=author_urn,
+    expires_at=expires_at   
 )
     add_to_database(account)
 

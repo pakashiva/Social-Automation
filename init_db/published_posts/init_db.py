@@ -2,8 +2,7 @@ from app import app, db
 from app_configuration.linkedin_app import Config
 
 # You only need to import it so SQLAlchemy registers the model.
-from init_db.linkedin_accounts.models import LinkedInAccount
-
+from init_db.published_posts.models import PublishedPost
 
 def initialize_database():
     with app.app_context():

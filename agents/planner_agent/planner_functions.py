@@ -5,13 +5,19 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from data.brand_context import elva_brand_context
 
-from model import llm
 from utils.strategy import load_strategy
 
 from agents.planner_agent.planner_prompt import SYSTEM_PROMPT
 from agents.planner_agent.planner_schema import PlannerOutput
 from agents.planner_agent.init_db import app, db
 from agents.planner_agent.models import PlannerHistory
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+llm = ChatGoogleGenerativeAI(
+    model = 'gemini-2.5-flash',
+    temperature = 0.2
+)
 
 
 def get_previous_history():

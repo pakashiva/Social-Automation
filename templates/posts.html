@@ -1,19 +1,56 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="page-header">
-    <div>
-        <p class="eyebrow">Published content</p>
-        <h1>Published Posts</h1>
-        <p class="lead">Once your automated workflows begin publishing content, completed posts will appear here.</p>
+{% if posts %}
+
+<section class="posts-grid">
+
+    {% for post in posts %}
+
+    <div class="post-card">
+
+        {% if post.image_url %}
+        <img
+            src="{{ post.image_url }}"
+            alt="Post Image"
+            class="post-card__image"
+        >
+        {% endif %}
+
+        <div class="post-card__content">
+
+            <div class="post-card__meta">
+                <span>{{ post.platform|capitalize }}</span>
+            </div>
+
+            <p class="post-card__caption">
+                {{ post.caption }}
+            </p>
+
+        </div>
+
+        <hr>
+
     </div>
+
+
+    {% endfor %}
+
 </section>
+
+{% else %}
 
 <section class="empty-state-card">
     <div class="empty-state-card__icon">
         <div class="empty-state-illustration"></div>
     </div>
+
     <h2>No Posts Published Yet</h2>
-    <p>Monitor your published content here once workflows have begun delivering scheduled posts.</p>
+
+    <p>
+        Monitor your published content here once workflows have begun delivering scheduled posts.
+    </p>
 </section>
+
+{% endif %}
 {% endblock %}

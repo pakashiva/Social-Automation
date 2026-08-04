@@ -99,6 +99,77 @@ def token_exchange(Auth_code):
 
     return access_token , expires_at
 
+def get_author_urn(access_token):
+    url = "https://api.linkedin.com/v2/userinfo"
+
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"Failed to fetch user info: {response.status_code} {response.text}"
+        )
+
+    data = response.json()
+
+    # 'sub' contains the member's LinkedIn ID
+    member_id = data.get("sub")
+
+    if not member_id:
+        raise RuntimeError("LinkedIn user ID not found.")
+
+    return f"urn:li:person:{member_id}"
+
+def fetch_company_urn(access_token):
+    url = (
+        "https://api.linkedin.com/v2/organizationalEntityAcls"
+        "?q=roleAssignee"
+        "&role=ADMINISTRATOR"
+        "&state=APPROVED"
+    )
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "LinkedIn-Version": "202507",
+        "X-Restli-Protocol-Version": "2.0.0"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise RuntimeError(response.text)
+
+    data = response.json()
+
+    if not data.get("elements"):
+        raise RuntimeError("User is not an administrator of any LinkedIn organization.")
+
+    return data["elements"][0]["organizationalTarget"]
+
+def get_published_posts(access_token, author_urn, count=20):
+    url = (
+        "https://api.linkedin.com/rest/posts"
+        f"?q=author&author={author_urn}&count={count}&sortBy=LAST_MODIFIED"
+    )
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "LinkedIn-Version": "202507",
+        "X-Restli-Protocol-Version": "2.0.0"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"Failed to fetch posts: {response.status_code}\n{response.text}"
+        )
+
+    return response.json()
+
 def add_to_database(account : LinkedInAccount):
     try:
         db.session.add(account)

@@ -11,6 +11,8 @@ class LinkedInAccount(db.Model):
 
     access_token = db.Column(db.Text, nullable=False)
 
+    author_urn = db.Column(db.String(100), nullable=False)
+
     expires_at = db.Column(db.DateTime, nullable=False)
 
     created_at = db.Column(

@@ -17,6 +17,24 @@ def evaluate_topic(pillar , topic , brand_context):
 
     structured_llm = llm.with_structured_output(TopicEvaluation)
 
+    messages = [
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMessage(
+            content=f"""
+Brand Context:
+{brand_context}
+
+Pillar:
+{pillar}
+
+Topic:
+{topic}
+"""
+        ),
+    ]
+
+    return structured_llm.invoke(messages)
+
     response = structured_llm.invoke(messages)
 
     return response
