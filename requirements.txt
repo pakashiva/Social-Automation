@@ -51,3 +51,5 @@ flask-sqlalchemy>=3.1.1
 cloudinary>=1.45.0
 
 croniter>=6.2.4
+
+ruamel.yaml>=0.19.1

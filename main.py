@@ -3,7 +3,7 @@ from services.linkedin_services import (logging_in , retrive_auth_code , get_aut
                                         token_exchange, add_to_database)
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
-import os, yaml
+from ruamel.yaml import YAML
 from pathlib import Path
 from app_configuration.linkedin_app import Config
 from init_db.linkedin_accounts.models import LinkedInAccount
@@ -52,32 +52,35 @@ def schedule():
 
 @app.route("/schedule_post", methods=["POST"])
 def schedule_post():
-    print("Route initiialized")
+    print("Route initialized")
+
     input_text = request.form.get("schedule_task")
 
     if not input_text:
         return "Schedule instruction is required.", 400
 
     cron_expression = convert_to_cron(input_text)
-    
     print(cron_expression)
 
     workflow_path = ".github/workflows/schedular.yml"
 
-    # Read existing workflow
+    yaml = YAML()
+    yaml.preserve_quotes = True
+
+    # Read workflow
     with open(workflow_path, "r") as f:
-        workflow = yaml.safe_load(f)
+        workflow = yaml.load(f)
 
-    # Update the schedule
-    on_key = "on" if "on" in workflow else True
-
-    workflow[on_key]["schedule"] = [
-    {"cron": cron_expression}
+    # Update schedule
+    workflow["on"]["schedule"] = [
+        {"cron": cron_expression}
     ]
-    
-    # Write it back
+
+    # Save workflow
     with open(workflow_path, "w") as f:
-        yaml.safe_dump(workflow, f, sort_keys=False)
+        yaml.dump(workflow, f)
+
+    print(workflow.keys())
 
     return "Schedule updated successfully."
 
