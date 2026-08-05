@@ -2,8 +2,6 @@ from datetime import datetime , UTC
 from app import db
 
 
-print("MetaAccount model loaded successfully.")
-
 class MetaAccount(db.Model):
 
     __bind_key__ = "meta"
