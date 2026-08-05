@@ -1,21 +1,29 @@
-from flask import Flask, render_template , redirect
+from flask import Flask, render_template , redirect, request
 from services.linkedin_services import (logging_in , retrive_auth_code , get_author_urn , 
                                         token_exchange, add_to_database)
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
-import os
+import os, yaml
 from pathlib import Path
 from app_configuration.linkedin_app import Config
 from init_db.linkedin_accounts.models import LinkedInAccount
 from init_db.published_posts.models import PublishedPost
-from app import db, app 
+from app import db, app
+from services.meta_services import (meta_login, retrieve_meta_auth_code, exchange_meta_token ,
+                                     add_meta_to_database, get_long_lived_token, 
+                                     get_user_info, get_pages, get_instagram_business)
+
+from datetime import datetime, timedelta, UTC
+from init_db.meta_accounts.models import MetaAccount
+from cron_converter.cron_conversion import convert_to_cron
+
 
 load_dotenv()
 
 def render_page(template_name, title, active_page):
     return render_template(template_name, title=title, active_page=active_page)
 
-# Paging routes for the Flask application
+# Paging routing for the Flask application
 
 @app.route("/")
 def home():
@@ -42,6 +50,33 @@ def schedule():
     return render_page("schedule.html", "Schedule Content — CorpAI Media", "schedule")
 
 
+@app.route("/schedule_post", methods=["POST"])
+def schedule_post():
+    input_text = request.form.get("schedule_task")
+
+    if not input_text:
+        return "Schedule instruction is required.", 400
+
+    cron_expression = convert_to_cron(input_text)
+
+    workflow_path = ".github/workflows/schedular.yml"
+
+    # Read existing workflow
+    with open(workflow_path, "r") as f:
+        workflow = yaml.safe_load(f)
+
+    # Update the schedule
+    workflow["on"]["schedule"] = [
+        {"cron": cron_expression}
+    ]
+
+    # Write it back
+    with open(workflow_path, "w") as f:
+        yaml.safe_dump(workflow, f, sort_keys=False)
+
+    return "Schedule updated successfully."
+
+
 @app.route("/posts")
 def posts():
     posts = PublishedPost.query.order_by(
@@ -52,11 +87,13 @@ def posts():
         "posts.html", title="Published Posts — CorpAI Media", active_page="posts", posts=posts
     )
 
-# Connecting to the LinkedIN
+# Connecting to LinkedIN
+
 @app.route('/connect_linkedIn')
 def login():
     linkedin_url = logging_in()
     return redirect(linkedin_url)  # callback route will be called after successful login
+
 
 # route to retrieve Auth code, token exchange , Saving in Database
 @app.route('/callback')
@@ -85,6 +122,83 @@ def callback():
     add_to_database(account)
 
     return "LinkedIn account connected successfully."
+
+# Connect to Meta
+@app.route("/connect_meta")
+def connect_meta():
+
+    meta_url = meta_login()
+
+    return redirect(meta_url)
+
+@app.route("/meta_callback")
+def meta_callback():
+
+    # Step 1: Retrieve authorization code
+    try:
+        auth_code = retrieve_meta_auth_code()
+    except ValueError as e:
+        return str(e), 401
+
+    # Step 2: Exchange code for a short-lived user token
+    try:
+        short_token = exchange_meta_token(auth_code)
+    except RuntimeError as e:
+        return str(e), 500
+
+    # Step 3: Convert to a long-lived user token
+    try:
+        long_token, expires_in = get_long_lived_token(short_token)
+    except RuntimeError as e:
+        return str(e), 500
+
+    # Step 4: Retrieve Facebook user details (optional, useful for future)
+    try:
+        user = get_user_info(long_token)
+    except RuntimeError as e:
+        return str(e), 500
+
+    # Step 5: Retrieve all managed Pages
+    try:
+        pages = get_pages(long_token)
+    except RuntimeError as e:
+        return str(e), 500
+
+    if not pages:
+        return "No Facebook Pages found.", 404
+
+    # For now, connect the first Page.
+    # Later, allow the user to choose one.
+    page = pages[0]
+
+    page_id = page["id"]
+    page_name = page["name"]
+    page_token = page["access_token"]
+
+    # Step 6: Retrieve the linked Instagram Business Account
+    try:
+        instagram = get_instagram_business(page_id, page_token)
+    except RuntimeError as e:
+        return str(e), 500
+
+    instagram_id = (
+        instagram["id"]
+        if instagram
+        else None
+    )
+
+
+    # Step 7: Save account
+    account = MetaAccount(
+        page_name=page_name,
+        page_id=page_id,
+        page_access_token=page_token,
+        instagram_business_id=instagram_id,
+    )
+
+    add_meta_to_database(account)
+
+    return "Meta account connected successfully."
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)

@@ -19,5 +19,6 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     SQLALCHEMY_BINDS = {
-    "published": f"sqlite:///{DATABASE_DIR / 'published_posts.db'}"
+    "published": f"sqlite:///{DATABASE_DIR / 'published_posts.db'}",
+    "meta": f"sqlite:///{DATABASE_DIR / 'meta_accounts.db'}"
 }

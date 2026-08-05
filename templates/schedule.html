@@ -8,46 +8,25 @@
         <p class="lead">Choose when AI-generated posts should be automatically published and manage your calendar preferences.</p>
     </div>
 </section>
-
-<form id="schedule-form" class="form-card">
+<form id="schedule-form" class="form-card" method="POST" action="/schedule_post">
     <div class="form-section">
         <div class="form-section__header">
             <h2>Human Readable Schedule</h2>
             <p>Enter scheduling instructions in plain English. The backend will later convert this into a Cron expression.</p>
         </div>
+
         <label class="field-group">
             <span>Schedule instruction</span>
-            <input id="schedule-input" type="text" placeholder="Every Monday at 9 AM" required>
+            <input
+                id="schedule-input"
+                name="schedule_task"
+                type="text"
+                placeholder="Every Monday at 9 AM"
+                required>
             <span id="schedule-error" class="field-error"></span>
         </label>
-    </div>
 
-    <div class="form-section">
-        <div class="form-section__header">
-            <h2>Calendar</h2>
-            <p>Select one or more dates to reserve publishing days for your content workflow.</p>
-        </div>
-        <div id="calendar" class="calendar"></div>
-        <div class="selected-dates-panel">
-            <h3>Selected Dates</h3>
-            <ul id="selected-dates" class="selected-dates"></ul>
-        </div>
-    </div>
-
-    <div class="form-section">
-        <div class="form-section__header">
-            <h2>Notes</h2>
-            <p>Optional preferences and scheduling notes for your content workflow.</p>
-        </div>
-        <label class="field-group field-group--textarea">
-            <span>Additional notes</span>
-            <textarea id="schedule-notes" rows="5" placeholder="Any additional scheduling preferences..."></textarea>
-        </label>
-    </div>
-
-    <div class="form-actions">
-        <button type="submit" class="button button--primary">Save Schedule</button>
-        <span id="schedule-error-global" class="field-error"></span>
+        <button type="submit">Save Schedule</button>
     </div>
 </form>
 {% endblock %}

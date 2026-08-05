@@ -16,17 +16,21 @@
         <p>Connect your LinkedIn profile or company page for automated posting.</p>
         <a href="/connect_linkedIn"><button class="button button--primary oauth-button">Connect LinkedIn</button></a>
     </article>
+   
     <article class="platform-card">
-        <div class="platform-card__icon platform-card__icon--facebook"></div>
-        <h2>Facebook</h2>
-        <p>Authorize your Facebook Page for scheduled publishing.</p>
-        <button class="button button--primary oauth-button">Connect Facebook</button>
-    </article>
-    <article class="platform-card">
-        <div class="platform-card__icon platform-card__icon--instagram"></div>
-        <h2>Instagram</h2>
-        <p>Connect your Instagram Business account for automatic content publishing.</p>
-        <button class="button button--primary oauth-button">Connect Instagram</button>
+    <div class="platform-card__icon platform-card__icon--meta"></div>
+
+    <h2>Meta</h2>
+
+    <p>
+        Connect your Meta account to authorize both your Facebook Page and
+        linked Instagram Business account for automated publishing and content
+        management.
+    </p>
+
+    <a href="/connect_meta"><button class="button button--primary oauth-button">
+        Connect Meta
+    </button></a>
     </article>
 </section>
 {% endblock %}

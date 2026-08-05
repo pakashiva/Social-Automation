@@ -1,14 +1,20 @@
-import os
 from app import db , app
 import requests
-from dotenv import load_dotenv
 from init_db.published_posts.models import PublishedPost
-import datetime
 
-load_dotenv()
+from init_db.meta_accounts.models import MetaAccount
+from app import app, db
 
-PAGE_ID = os.getenv("FB_PAGE_ID")
-PAGE_ACCESS_TOKEN = os.getenv("FB_PAGE_ACCESS_TOKEN")
+
+with app.app_context():
+    last_account = MetaAccount.query.order_by(MetaAccount.id.desc()).first()
+
+    if last_account:
+        PAGE_ID = last_account.page_id
+        PAGE_ACCESS_TOKEN = last_account.page_access_token
+    else:
+        PAGE_ID = None
+        PAGE_ACCESS_TOKEN = None
 
 url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/feed"
 
