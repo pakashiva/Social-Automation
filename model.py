@@ -24,9 +24,6 @@ llm = ChatGoogleGenerativeAI(
     api_key=GEMINI_API_KEY
 )
 
-print(type(GEMINI_API_KEY))
-print(repr(GEMINI_API_KEY))
-
 embeddings = GoogleGenerativeAIEmbeddings(
     model="models/gemini-embedding-001",
     api_key=GEMINI_API_KEY,   # or set GEMINI_API_KEY env variable
