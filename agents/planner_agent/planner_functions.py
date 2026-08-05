@@ -12,13 +12,7 @@ from agents.planner_agent.planner_schema import PlannerOutput
 from agents.planner_agent.init_db import app, db
 from agents.planner_agent.models import PlannerHistory
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-
-llm = ChatGoogleGenerativeAI(
-    model = 'gemini-2.5-flash',
-    temperature = 0.2
-)
-
+from model import llm
 
 def get_previous_history():
 

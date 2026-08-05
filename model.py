@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 
 llm = ChatGoogleGenerativeAI(
@@ -25,5 +25,5 @@ llm = ChatGoogleGenerativeAI(
 
 embeddings = GoogleGenerativeAIEmbeddings(
     model="models/gemini-embedding-001",
-    google_api_key=GOOGLE_API_KEY,   # or set GOOGLE_API_KEY env variable
+    google_api_key=GEMINI_API_KEY,   # or set GEMINI_API_KEY env variable
 )

@@ -1,12 +1,6 @@
-
 from agents.content_writer_agent.content_prompt import FACEBOOK_PROMPT , INSTAGRAM_PROMPT , LINKEDIN_PROMPT
 from langchain_core.messages import HumanMessage , SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
-
-llm = ChatGoogleGenerativeAI(
-    model = 'gemini-2.5-flash',
-    temperature = 0.2
-)
+from model import llm
 
 
 def generate_linkedin_content(topic , brand_voice , pillar  , post_format , pillar_guidlines):
