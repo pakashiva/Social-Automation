@@ -77,20 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const scheduleError = document.getElementById('schedule-error');
     const scheduleErrorGlobal = document.getElementById('schedule-error-global');
 
-    if (scheduleForm) {
-        scheduleForm.addEventListener('submit', event => {
-            event.preventDefault();
-            const scheduleText = scheduleInput.value.trim();
-            if (!scheduleText) {
-                scheduleError.textContent = 'Schedule cannot be empty.';
-                return;
-            }
-
-            scheduleError.textContent = '';
-            scheduleErrorGlobal.textContent = '';
-            alert('Schedule saved successfully (frontend only).');
-        });
-    }
 
     const calendar = document.getElementById('calendar');
     const selectedDatesList = document.getElementById('selected-dates');

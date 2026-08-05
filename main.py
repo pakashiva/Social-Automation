@@ -52,12 +52,15 @@ def schedule():
 
 @app.route("/schedule_post", methods=["POST"])
 def schedule_post():
+    print("Route initiialized")
     input_text = request.form.get("schedule_task")
 
     if not input_text:
         return "Schedule instruction is required.", 400
 
     cron_expression = convert_to_cron(input_text)
+    
+    print(cron_expression)
 
     workflow_path = ".github/workflows/schedular.yml"
 
@@ -66,10 +69,12 @@ def schedule_post():
         workflow = yaml.safe_load(f)
 
     # Update the schedule
-    workflow["on"]["schedule"] = [
-        {"cron": cron_expression}
-    ]
+    on_key = "on" if "on" in workflow else True
 
+    workflow[on_key]["schedule"] = [
+    {"cron": cron_expression}
+    ]
+    
     # Write it back
     with open(workflow_path, "w") as f:
         yaml.safe_dump(workflow, f, sort_keys=False)
