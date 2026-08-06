@@ -9,8 +9,8 @@ from utils.strategy import load_strategy
 
 from agents.planner_agent.planner_prompt import SYSTEM_PROMPT
 from agents.planner_agent.planner_schema import PlannerOutput
-from agents.planner_agent.init_db import app, db
-from agents.planner_agent.models import PlannerHistory
+from app import app, db
+from initialize_database.models import PlannerHistory
 
 from model import llm
 

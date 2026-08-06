@@ -5,16 +5,14 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from ruamel.yaml import YAML
 from pathlib import Path
-from app_configuration.linkedin_app import Config
-from init_db.linkedin_accounts.models import LinkedInAccount
-from init_db.published_posts.models import PublishedPost
+from app_configuration.app_config import Config
+from initialize_database.models import Account, PublishedPost
 from app import db, app
 from services.meta_services import (meta_login, retrieve_meta_auth_code, exchange_meta_token ,
                                      add_meta_to_database, get_long_lived_token, 
                                      get_user_info, get_pages, get_instagram_business)
 
 from datetime import datetime, timedelta, UTC
-from init_db.meta_accounts.models import MetaAccount
 from cron_converter.cron_conversion import convert_to_cron
 
 
@@ -121,7 +119,7 @@ def callback():
     except RuntimeError as e:
         return str(e), 500
 
-    account = LinkedInAccount(
+    account = Account(
     company_name="ABC Company",
     access_token=access_token,
     author_urn=author_urn,
@@ -197,7 +195,7 @@ def meta_callback():
 
 
     # Step 7: Save account
-    account = MetaAccount(
+    account = Account(
         page_name=page_name,
         page_id=page_id,
         page_access_token=page_token,

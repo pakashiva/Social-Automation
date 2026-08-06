@@ -2,7 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 
-from app_configuration.linkedin_app import Config
+from app_configuration.app_config import Config
 load_dotenv()
 
 db = SQLAlchemy()

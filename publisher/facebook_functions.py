@@ -1,13 +1,12 @@
 from app import db , app
 import requests
-from init_db.published_posts.models import PublishedPost
+from initialize_database.models import PublishedPost , Account
 
-from init_db.meta_accounts.models import MetaAccount
 from app import app, db
 
 
 with app.app_context():
-    last_account = MetaAccount.query.order_by(MetaAccount.id.desc()).first()
+    last_account = Account.query.order_by(Account.id.desc()).first()
 
     if last_account:
         PAGE_ID = last_account.page_id

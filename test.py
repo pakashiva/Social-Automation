@@ -1,5 +1,14 @@
-from cron_converter.cron_conversion import convert_to_cron
+import sqlite3
 
-cron_expression = convert_to_cron("Every Monday , Wednesday, and Friday at 10:00 AM")
+conn = sqlite3.connect("databases/app.db")
+cursor = conn.cursor()
 
-print(cron_expression)
+cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+tables = cursor.fetchall()
+
+print(conn)
+
+for table in tables:
+    print(table[0])
+
+conn.close()

@@ -5,7 +5,7 @@ from flask import session , request
 from urllib.parse import urlencode
 
 from app import db
-from init_db.meta_accounts.models import MetaAccount
+from initialize_database.models import Account
 
 from datetime import datetime, timedelta, timezone,  UTC
 
@@ -163,7 +163,7 @@ def get_instagram_business(page_id, page_token):
     return response.json().get("instagram_business_account")
 
 
-def add_meta_to_database(account: MetaAccount):
+def add_meta_to_database(account: Account):
 
     try:
         db.session.add(account)

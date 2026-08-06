@@ -3,7 +3,7 @@ from flask import session ,request
 from urllib.parse import urlencode
 from datetime import datetime, timedelta , UTC
 from dotenv import load_dotenv
-from init_db.linkedin_accounts.models import LinkedInAccount
+from initialize_database.models import Account
 from app import db
 
 load_dotenv()
@@ -170,7 +170,7 @@ def get_published_posts(access_token, author_urn, count=20):
 
     return response.json()
 
-def add_to_database(account : LinkedInAccount):
+def add_to_database(account : Account):
     try:
         db.session.add(account)
         db.session.commit()
