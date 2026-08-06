@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="auth-page">
+    <div class="auth-container">
+
+        <form class="form-card" method="POST">
+
+            <div class="auth-title">
+                <p class="eyebrow">Welcome Back</p>
+                <h1>Login</h1>
+            </div>
+
+            <p class="auth-subtitle">
+                Sign in to continue.
+            </p>
+
+            <div class="field-group">
+                <label>Email</label>
+                <input type="email" name="email" required>
+            </div>
+
+            <div class="field-group">
+                <label>Password</label>
+                <input type="password" name="password" required>
+            </div>
+
+            <div class="form-actions">
+                <button class="button button--primary" type="submit">
+                    Login
+                </button>
+            </div>
+
+            <div class="auth-footer">
+                Don't have an account?
+                <a href="/signup">Create one</a>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}

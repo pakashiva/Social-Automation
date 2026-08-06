@@ -46,3 +46,7 @@ cloudinary>=1.45.0
 croniter>=6.2.4
 
 ruamel.yaml>=0.19.1
+
+# JWT Authentication
+flask-jwt-extended>=4.7.4
+werkzeug>=3.1.8

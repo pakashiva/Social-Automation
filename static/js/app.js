@@ -1,10 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const oauthButtons = document.querySelectorAll('.oauth-button');
-    oauthButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            alert('Backend OAuth integration coming soon.');
-        });
-    });
 
     const strategyFile = document.getElementById('strategy-file');
     const strategyFilename = document.getElementById('strategy-filename');
@@ -66,9 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 valid = false;
             }
 
-            if (valid) {
-                alert('Data saved successfully (frontend only).');
-            }
+
         });
     }
 

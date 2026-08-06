@@ -4,74 +4,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
+
+    <!-- ================= HEADER ================= -->
+
     <header class="topbar">
         <div class="topbar__brand">
             <span class="logo">CorpAI Media</span>
         </div>
+
         <nav class="topbar__nav">
-            <a href="{{ url_for('home') }}" class="nav-link{% if active_page == 'home' %} active{% endif %}">Home</a>
-            <a href="{{ url_for('about') }}" class="nav-link{% if active_page == 'about' %} active{% endif %}">About Us</a>
-            <a href="{{ url_for('oauth') }}" class="nav-link{% if active_page == 'oauth' %} active{% endif %}">Sign In</a>
-            <a href="{{ url_for('oauth') }}" class="nav-link{% if active_page == 'oauth' %} active{% endif %}">Login</a>
+            <a href="{{ url_for('home') }}"
+               class="nav-link{% if active_page == 'home' %} active{% endif %}">
+                Home
+            </a>
+
+            <a href="{{ url_for('about') }}"
+               class="nav-link{% if active_page == 'about' %} active{% endif %}">
+                About Us
+            </a>
+
+            <a href="{{ url_for('signup') }}"
+               class="nav-link{% if active_page == 'signup' %} active{% endif %}">
+                Sign Up
+            </a>
+
+            <a href="{{ url_for('login') }}"
+               class="nav-link{% if active_page == 'login' %} active{% endif %}">
+                Login
+            </a>
         </nav>
     </header>
 
     <div class="dashboard-layout">
+
+        <!-- ================ SIDEBAR ================= -->
+
+        {% if show_sidebar|default(True) %}
         <aside class="sidebar">
+
             <div class="sidebar__section">
-                <div class="sidebar__title">Navigation</div>
-                <a href="{{ url_for('oauth') }}" class="sidebar-link{% if active_page == 'oauth' %} active{% endif %}">
-                    <span class="icon icon--lock" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                            <rect x="6" y="11" width="12" height="10" rx="2" />
-                        </svg>
-                    </span>
+
+                <div class="sidebar__title">
+                    Navigation
+                </div>
+
+                <a href="{{ url_for('oauth') }}"
+                   class="sidebar-link{% if active_page == 'oauth' %} active{% endif %}">
                     OAuth Login
                 </a>
-                <a href="{{ url_for('company') }}" class="sidebar-link{% if active_page == 'company' %} active{% endif %}">
-                    <span class="icon icon--building" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M6 21V4h12v17" />
-                            <path d="M10 21V10h4v11" />
-                            <path d="M9 7h.01M15 7h.01M9 13h.01M15 13h.01" />
-                        </svg>
-                    </span>
+
+                <a href="{{ url_for('company') }}"
+                   class="sidebar-link{% if active_page == 'company' %} active{% endif %}">
                     Company Data
                 </a>
-                <a href="{{ url_for('schedule') }}" class="sidebar-link{% if active_page == 'schedule' %} active{% endif %}">
-                    <span class="icon icon--calendar" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <rect x="4" y="5" width="16" height="15" rx="2" />
-                            <path d="M16 3v4M8 3v4M4 10h16" />
-                        </svg>
-                    </span>
+
+                <a href="{{ url_for('schedule') }}"
+                   class="sidebar-link{% if active_page == 'schedule' %} active{% endif %}">
                     Schedule Content
                 </a>
-                <a href="{{ url_for('posts') }}" class="sidebar-link{% if active_page == 'posts' %} active{% endif %}">
-                    <span class="icon icon--post" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M5 8h14" />
-                            <path d="M5 12h9" />
-                            <path d="M5 16h14" />
-                            <path d="M7 4h10" />
-                        </svg>
-                    </span>
+
+                <a href="{{ url_for('posts') }}"
+                   class="sidebar-link{% if active_page == 'posts' %} active{% endif %}">
                     Published Posts
                 </a>
+
             </div>
+
         </aside>
+        {% endif %}
+
+        <!-- ================= MAIN ================= -->
 
         <main class="main-content">
+
+            <!-- Flash Messages -->
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+
+                    <div class="flash-container">
+
+                        {% for category, message in messages %}
+
+                            <div class="alert alert-{{ category }}">
+
+                                <span>{{ message }}</span>
+
+                                <button
+                                    class="flash-close"
+                                    onclick="this.parentElement.remove();">
+
+                                    &times;
+
+                                </button>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+            {% endwith %}
+
             <div class="page-content">
-                {% block content %}{% endblock %}
+
+                {% block content %}
+                {% endblock %}
+
             </div>
+
         </main>
+
     </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
 </body>
 </html>

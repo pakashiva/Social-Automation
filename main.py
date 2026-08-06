@@ -1,22 +1,72 @@
-from flask import Flask, render_template , redirect, request
-from services.linkedin_services import (logging_in , retrive_auth_code , get_author_urn , 
-                                        token_exchange, add_to_database)
-from flask_sqlalchemy import SQLAlchemy
-from dotenv import load_dotenv
-from ruamel.yaml import YAML
+import os
+from app import app, db
 from pathlib import Path
+from ruamel.yaml import YAML
+from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy
 from app_configuration.app_config import Config
-from initialize_database.models import Account, PublishedPost
-from app import db, app
-from services.meta_services import (meta_login, retrieve_meta_auth_code, exchange_meta_token ,
-                                     add_meta_to_database, get_long_lived_token, 
-                                     get_user_info, get_pages, get_instagram_business)
-
-from datetime import datetime, timedelta, UTC
+from initialize_database.models import Account, PublishedPost, User
+from datetime import UTC, datetime, timedelta
 from cron_converter.cron_conversion import convert_to_cron
+from werkzeug.security import check_password_hash, generate_password_hash
+from flask import Flask, flash, make_response, redirect, render_template, request, url_for
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+)
+from services.linkedin_services import (
+    add_to_database,
+    get_author_urn,
+    logging_in,
+    retrive_auth_code,
+    token_exchange,
+)
+from services.meta_services import (
+    add_meta_to_database,
+    exchange_meta_token,
+    get_instagram_business,
+    get_long_lived_token,
+    get_pages,
+    get_user_info,
+    meta_login,
+    retrieve_meta_auth_code,
+)
 
 
 load_dotenv()
+
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False   # Enable in production
+
+jwt = JWTManager(app)
+
+@jwt.expired_token_loader
+def expired_token(jwt_header, jwt_payload):
+    flash("Your session has expired. Please log in again.", "warning")
+    return redirect(url_for("login"))
+
+
+@jwt.invalid_token_loader
+def invalid_token(reason):
+    flash("Invalid session. Please log in again.", "danger")
+    return redirect(url_for("login"))
+
+
+@jwt.unauthorized_loader
+def missing_token(reason):
+    flash("Please log in to continue.", "warning")
+    return redirect(url_for("login"))
+
+
+@jwt.revoked_token_loader
+def revoked_token(jwt_header, jwt_payload):
+    flash("Your session is no longer valid. Please log in again.", "warning")
+    return redirect(url_for("login"))
+
 
 def render_page(template_name, title, active_page):
     return render_template(template_name, title=title, active_page=active_page)
@@ -47,8 +97,115 @@ def company():
 def schedule():
     return render_page("schedule.html", "Schedule Content — CorpAI Media", "schedule")
 
+@app.route("/posts")
+def posts():
+    posts = PublishedPost.query.order_by(
+    PublishedPost.published_at.desc()
+).all()
+
+    return render_template(
+        "posts.html", title="Published Posts — CorpAI Media", active_page="posts", posts=posts
+    )
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+
+    if request.method == "POST":
+
+        email = request.form.get(
+            "email",
+            ""
+        ).strip().lower()
+
+        password = request.form.get(
+            "password",
+            ""
+        )
+
+        user = User.query.filter_by(
+            email=email
+        ).first()
+
+        if not user:
+
+            flash("Invalid credentials." , "error")
+            return redirect(url_for("login"))
+
+        if not check_password_hash(
+            user.password,
+            password
+        ):
+
+            flash("Invalid credentials." , "error")
+
+            return redirect(url_for("login"))
+
+        access_token = create_access_token(
+            identity=user.user_id
+        )
+
+        response = make_response(
+            redirect(url_for("dashboard"))
+        )
+
+        response.set_cookie(
+            "access_token",
+            access_token,
+            httponly=True,
+            secure=False,      # True in production (HTTPS)
+            samesite="Lax"
+        )
+        flash("Logged in successfully." , "success")
+
+        return response
+
+    return render_page(
+        "login.html",
+        "Login — CorpAI Media",
+        "login"
+    )
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+
+    if request.method == "POST":
+
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        if not email or not password:
+
+            flash("Please fill all fields." , "error")
+            return redirect(url_for("signup"))
+
+        existing = User.query.filter_by(
+            email=email
+        ).first()
+
+        if existing:
+
+            flash("Email already exists." , "error")
+            return redirect(url_for("signup"))
+
+        user = User(
+            email=email,
+            password=generate_password_hash(password)
+        )
+
+        db.session.add(user)
+        db.session.commit()
+        flash("Account created successfully." , "success")
+        return redirect(url_for("login"))
+
+    return render_page(
+        "signup.html",
+        "Sign Up — CorpAI Media",
+        "signup"
+    )
 
 @app.route("/schedule_post", methods=["POST"])
+@jwt_required()
 def schedule_post():
     print("Route initialized")
 
@@ -83,20 +240,11 @@ def schedule_post():
     return "Schedule updated successfully."
 
 
-@app.route("/posts")
-def posts():
-    posts = PublishedPost.query.order_by(
-    PublishedPost.published_at.desc()
-).all()
-
-    return render_template(
-        "posts.html", title="Published Posts — CorpAI Media", active_page="posts", posts=posts
-    )
-
 # Connecting to LinkedIN
 
 @app.route('/connect_linkedIn')
-def login():
+@jwt_required()
+def connect():
     linkedin_url = logging_in()
     return redirect(linkedin_url)  # callback route will be called after successful login
 
@@ -131,6 +279,7 @@ def callback():
 
 # Connect to Meta
 @app.route("/connect_meta")
+@jwt_required()
 def connect_meta():
 
     meta_url = meta_login()
