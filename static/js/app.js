@@ -43,26 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const companyForm = document.getElementById('company-form');
-    if (companyForm) {
-        companyForm.addEventListener('submit', event => {
-            event.preventDefault();
-            const file = strategyFile.files[0];
-            const context = brandContext.value.trim();
-            let valid = true;
-
-            if (!file || file.type !== 'application/pdf') {
-                strategyError.textContent = 'Please upload a PDF document.';
-                valid = false;
-            }
-
-            if (context.length < 100) {
-                contextError.textContent = 'Brand Context must contain at least 100 characters.';
-                valid = false;
-            }
-
-
-        });
-    }
 
     const scheduleForm = document.getElementById('schedule-form');
     const scheduleInput = document.getElementById('schedule-input');

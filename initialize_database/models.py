@@ -1,5 +1,5 @@
 from app import app , db
-from datetime import datetime
+from datetime import datetime, UTC
 import uuid
 
 
@@ -28,10 +28,6 @@ class User(db.Model):
         nullable=False
     )
 
-    created_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow
-    )
 
 # ============================================================
 # Social Accounts
@@ -86,7 +82,7 @@ class PublishedPost(db.Model):
 
     posted_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=datetime.now(UTC)
     )
 
     post_content = db.Column(
@@ -115,16 +111,12 @@ class CompanyInfo(db.Model):
     )
 
     # Store file path
-    # Example:
-    # uploads/5c0f3d9b/content_strategy.pdf
     content_strategy_path = db.Column(
         db.String(500)
     )
 
-    updated_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+    scheduled_time = db.Column(
+        db.String(50)
     )
 
 
@@ -164,5 +156,5 @@ class PlannerHistory(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=datetime.now(UTC)
     )

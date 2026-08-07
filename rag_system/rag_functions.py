@@ -32,12 +32,9 @@ from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 
 # Configuration
 
-PDF_PATH = "data/pillar_info.pdf"
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 CHROMA_PATH = BASE_DIR / "databases" / "chromadb"
-COLLECTION_NAME = "Pillars"  # like table names in SQL
-EMBEDDING_MODEL = "text-embedding-3-small"
-LLM_MODEL = "gpt-4.1"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 20
 TOP_K = 5
@@ -46,7 +43,7 @@ FINAL_K = 5
 
 # Load PDF
 
-def load_pdf() -> List[Document]:
+def load_pdf(PDF_PATH) -> List[Document]:
     """
     Load the company PDF.
     """
@@ -80,7 +77,7 @@ def split_documents(
 
 # Create Chroma Database
 
-def create_vectorstore(chunks: List[Document]):
+def create_vectorstore(chunks: List[Document], COLLECTION_NAME):
 
     vectorstore = Chroma.from_documents(
         documents=chunks,
@@ -94,22 +91,19 @@ def create_vectorstore(chunks: List[Document]):
 
 # Load Existing Chroma
 
-def load_vectorstore():
+def load_vectorstore(COLLECTION_NAME):
 
     vectorstore = Chroma(
         collection_name=COLLECTION_NAME,
         embedding_function=embeddings,
         persist_directory=CHROMA_PATH,
     )
-
-    print("Loaded existing Chroma")
-
     return vectorstore
 
 
 # Build or Load Database
 
-def get_vectorstore():
+def build_vector_store(COLLECTION_NAME , PDF_PATH):
 
     vectorstore = Chroma(
         collection_name=COLLECTION_NAME,
@@ -117,14 +111,15 @@ def get_vectorstore():
         persist_directory=CHROMA_PATH,
     )
 
+      # If collection exists, delete all existing embeddings
     if vectorstore._collection.count() > 0:
-        print("Loaded existing Chroma Database")
-        return vectorstore
+        print("Existing collection found. Replacing it...")
+        vectorstore.delete(where={})
     
     print("Creating new Chroma Database")
-    docs = load_pdf()
+    docs = load_pdf(PDF_PATH)
     chunks = split_documents(docs)
-    return create_vectorstore(chunks)
+    create_vectorstore(chunks , COLLECTION_NAME)
 
 # Build BM25 Retriever
 
@@ -251,7 +246,7 @@ def create_retriever(
 def retrive_chunks(
         topic,
 ):
-    vectorstore = get_vectorstore()
+    vectorstore = build_vector_store()
     retriever = create_retriever(
         vectorstore
     )
@@ -279,7 +274,7 @@ def create_semantic_retriever(vectorstore:Chroma):
     return hybrid
 
 def retrieve_semantic_chunks(pillar):
-    vectorstore = get_vectorstore()
+    vectorstore = build_vector_store()
     retriever = create_semantic_retriever(vectorstore=vectorstore)
 
     docs = retriever.invoke(

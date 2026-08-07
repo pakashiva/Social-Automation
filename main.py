@@ -1,11 +1,13 @@
 import os
+from uuid import uuid4
 from app import app, db
 from pathlib import Path
 from ruamel.yaml import YAML
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
+from rag_system.rag_functions import build_vector_store
 from app_configuration.app_config import Config
-from initialize_database.models import Account, PublishedPost, User
+from initialize_database.models import Account, PublishedPost, User , CompanyInfo
 from datetime import UTC, datetime, timedelta
 from cron_converter.cron_conversion import convert_to_cron
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -36,6 +38,9 @@ from services.meta_services import (
 
 
 load_dotenv()
+
+UPLOAD_FOLDER = Path("uploads")
+UPLOAD_FOLDER.mkdir(exist_ok=True)
 
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
@@ -100,8 +105,10 @@ def schedule():
 @app.route("/posts")
 def posts():
     posts = PublishedPost.query.order_by(
-    PublishedPost.published_at.desc()
+    PublishedPost.posted_at.desc()
 ).all()
+
+    print("POSTS: " , posts)
 
     return render_template(
         "posts.html", title="Published Posts — CorpAI Media", active_page="posts", posts=posts
@@ -145,7 +152,7 @@ def login():
         )
 
         response = make_response(
-            redirect(url_for("dashboard"))
+            redirect(url_for("home"))
         )
 
         response.set_cookie(
@@ -208,7 +215,7 @@ def signup():
 @jwt_required()
 def schedule_post():
     print("Route initialized")
-
+    user_id = get_jwt_identity()
     input_text = request.form.get("schedule_task")
 
     if not input_text:
@@ -237,8 +244,21 @@ def schedule_post():
 
     print(workflow.keys())
 
-    return "Schedule updated successfully."
+    company = CompanyInfo.query.filter_by(user_id=user_id).first()
 
+    if not company:
+        company = CompanyInfo(
+            scheduled_time = cron_expression
+        )
+        db.session.add(company)
+    else:
+        company.scheduled_time = cron_expression
+
+    db.session.commit()    
+
+    flash("Schedule updated successfully" , "success")
+
+    return redirect(url_for('schedule'))
 
 # Connecting to LinkedIN
 
@@ -275,7 +295,9 @@ def callback():
 )
     add_to_database(account)
 
-    return "LinkedIn account connected successfully."
+    flash("LinkedIn Account connected Successfully" , "Success")
+
+    return redirect(url_for('oauth'))
 
 # Connect to Meta
 @app.route("/connect_meta")
@@ -353,7 +375,81 @@ def meta_callback():
 
     add_meta_to_database(account)
 
-    return "Meta account connected successfully."
+    flash("Meta Account connected Successfully" , "Success")
+    
+    return redirect(url_for('oauth'))
+
+
+@app.route('/save_company_data' , methods = ['POST'])
+@jwt_required()
+def save_company_info():
+    user_id = get_jwt_identity()
+
+    brand_context = request.form.get(
+        "brand_context",
+        ""
+    ).strip()
+
+    pdf = request.files.get("strategy_pdf")
+
+    if not brand_context:
+        flash("Please enter brand context." , "error")
+        return redirect(url_for("company"))
+
+    if not pdf:
+        flash("Please upload a PDF.", "error")
+        return redirect(url_for("company"))
+
+    if pdf.filename == "":
+        flash("Please select a PDF.", "error")
+        return redirect(url_for("company"))
+
+    if not pdf.filename.lower().endswith(".pdf"):
+        flash("Only PDF files are allowed." , "error")
+        return redirect(url_for("company"))
+
+    #save pdf
+
+    user_folder = UPLOAD_FOLDER / user_id
+    user_folder.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{uuid4().hex}.pdf"
+    pdf_path = user_folder / filename
+    pdf.save(pdf_path)
+
+    # create embeddings
+
+    collection_name = str(user_id)
+
+    try:
+        build_vector_store(COLLECTION_NAME=collection_name , PDF_PATH=pdf_path)
+    except Exception as e:
+        flash("Failed to process PDF" , "error")
+        return redirect(url_for("company"))
+
+    company = CompanyInfo.query.filter_by(
+        user_id=user_id
+    ).first()
+
+    if company:
+        company.brand_context = brand_context
+        company.content_strategy_path = str(pdf_path)
+
+    else:
+
+        company = CompanyInfo(
+            user_id=user_id,
+            brand_context=brand_context,
+            content_strategy_path=str(pdf_path)
+        )
+
+        db.session.add(company)
+
+    db.session.commit()
+    flash("Company information saved successfully." , "success")
+
+    return redirect(url_for("company"))
+
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
