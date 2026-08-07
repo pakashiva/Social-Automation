@@ -115,6 +115,8 @@ class CompanyInfo(db.Model):
         db.String(500)
     )
 
+    content_strategy_json = db.Column(db.JSON)
+
     scheduled_time = db.Column(
         db.String(50)
     )

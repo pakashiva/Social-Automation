@@ -3,6 +3,7 @@ from uuid import uuid4
 from app import app, db
 from pathlib import Path
 from ruamel.yaml import YAML
+from pdf_to_json.strategy_loader import convert_pdf_to_strategy
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from rag_system.rag_functions import build_vector_store
@@ -424,9 +425,15 @@ def save_company_info():
     try:
         build_vector_store(COLLECTION_NAME=collection_name , PDF_PATH=pdf_path)
     except Exception as e:
-        flash("Failed to process PDF" , "error")
+        flash(e , "error")
         return redirect(url_for("company"))
 
+    try:
+        strategy_json = convert_pdf_to_strategy(pdf_path=pdf_path)
+    except Exception as e:
+        flash(e + "This is not good" , "error")
+        return redirect(url_for('company'))
+    
     company = CompanyInfo.query.filter_by(
         user_id=user_id
     ).first()
@@ -434,13 +441,15 @@ def save_company_info():
     if company:
         company.brand_context = brand_context
         company.content_strategy_path = str(pdf_path)
+        company.content_strategy_json = strategy_json
 
     else:
 
         company = CompanyInfo(
             user_id=user_id,
             brand_context=brand_context,
-            content_strategy_path=str(pdf_path)
+            content_strategy_path=str(pdf_path),
+            content_strategy_json= strategy_json
         )
 
         db.session.add(company)
