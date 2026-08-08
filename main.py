@@ -1,4 +1,4 @@
-import os
+import os , json , traceback
 from uuid import uuid4
 from app import app, db
 from pathlib import Path
@@ -215,7 +215,6 @@ def signup():
 @app.route("/schedule_post", methods=["POST"])
 @jwt_required()
 def schedule_post():
-    print("Route initialized")
     user_id = get_jwt_identity()
     input_text = request.form.get("schedule_task")
 
@@ -224,26 +223,6 @@ def schedule_post():
 
     cron_expression = convert_to_cron(input_text)
     print(cron_expression)
-
-    workflow_path = ".github/workflows/schedular.yml"
-
-    yaml = YAML()
-    yaml.preserve_quotes = True
-
-    # Read workflow
-    with open(workflow_path, "r") as f:
-        workflow = yaml.load(f)
-
-    # Update schedule
-    workflow["on"]["schedule"] = [
-        {"cron": cron_expression}
-    ]
-
-    # Save workflow
-    with open(workflow_path, "w") as f:
-        yaml.dump(workflow, f)
-
-    print(workflow.keys())
 
     company = CompanyInfo.query.filter_by(user_id=user_id).first()
 
@@ -425,14 +404,27 @@ def save_company_info():
     try:
         build_vector_store(COLLECTION_NAME=collection_name , PDF_PATH=pdf_path)
     except Exception as e:
-        flash(e , "error")
+        print("ERROR:", e)
+        traceback.print_exc()
+        flash(str(e) , "error")
         return redirect(url_for("company"))
 
     try:
-        strategy_json = convert_pdf_to_strategy(pdf_path=pdf_path)
+        strategy = convert_pdf_to_strategy(pdf_path=pdf_path)
     except Exception as e:
-        flash(e + "This is not good" , "error")
+        flash(f"{e} This is not good", "error")
         return redirect(url_for('company'))
+
+#     strategy_json = {
+#     "pillars": strategy.pillars,
+#     "brand_voice": strategy.brand_voice,
+#     "post_formats": strategy.post_formats,
+# }
+
+    strategy_json = strategy.model_dump(mode="json")
+
+    # Test serialization
+    json.dumps(strategy_json)
     
     company = CompanyInfo.query.filter_by(
         user_id=user_id

@@ -113,8 +113,8 @@ def build_vector_store(COLLECTION_NAME , PDF_PATH):
 
       # If collection exists, delete all existing embeddings
     if vectorstore._collection.count() > 0:
-        print("Existing collection found. Replacing it...")
-        vectorstore.delete(where={})
+        print(f"Existing collection found. Replacing it...")
+    vectorstore.delete_collection()
     
     print("Creating new Chroma Database")
     docs = load_pdf(PDF_PATH)

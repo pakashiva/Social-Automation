@@ -3,7 +3,7 @@ from langchain_core.messages import SystemMessage
 from agents.topic_evaluator.eval_prompt import SYSTEM_PROMPT
 from agents.topic_evaluator.eval_schema import TopicEvaluation
 from agents.planner_agent.planner_functions import invoke_planner
-from data.brand_context import elva_brand_context
+from initialize_database.models import CompanyInfo
 from agents.planner_agent.planner_functions import save_to_database
 from langchain.messages import HumanMessage
 
@@ -40,20 +40,22 @@ Topic:
     return response
 
 
-def generate_topic():
+def generate_topic(user_id):
     feedback = None
 
+    company = CompanyInfo.query.filter_by(user_id=user_id).first()
+
     for attempt in range(5):
-        output = invoke_planner(feedback)
+        output = invoke_planner(user_id=user_id , feedback=feedback)
 
         remarks = evaluate_topic(
             topic=output.topic,
             pillar=output.pillar,
-            brand_context=elva_brand_context,
+            brand_context=company.brand_context,
         )
 
         if remarks.approve:
-            save_to_database(output)
+            save_to_database(output=output , user_id=user_id)
             return output
 
         feedback = f"""
