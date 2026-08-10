@@ -1,34 +1,27 @@
-name: Scheduled Content Generator
+name: Content Scheduler
 
 on:
+  schedule:
+    - cron: "0 * * * *"
+
   workflow_dispatch:
 
-  schedule:
-    # Default schedule (updated by your Flask app)
-  - cron: 30 12 * * MON,WED,FRI
-permissions:
-  contents: read
-
 jobs:
-  generate-content:
+  scheduler:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Run Scheduled Task
-      env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: |-
-        python run_file.py
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scheduler
+        run: python scheduler.py

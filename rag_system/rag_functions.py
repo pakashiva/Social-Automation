@@ -273,13 +273,23 @@ def create_semantic_retriever(vectorstore:Chroma):
 
     return hybrid
 
-def retrieve_semantic_chunks(pillar):
-    vectorstore = build_vector_store()
-    retriever = create_semantic_retriever(vectorstore=vectorstore)
+def retrieve_semantic_chunks(pillar, user_id):
 
-    docs = retriever.invoke(
-            pillar
-        )
+    # Open the Chroma collection belonging to this user
+
+
+    vectorstore = Chroma(
+        collection_name=str(user_id),
+        persist_directory=str(CHROMA_PATH),
+        embedding_function=embeddings,
+    )
+
+    # Build hybrid retriever for this user's collection
+    retriever = create_semantic_retriever(vectorstore)
+
+    # Retrieve using the pillar as the search query
+    docs = retriever.invoke(pillar)
+
     
     data = ""
     for i, doc in enumerate(docs, start=1):

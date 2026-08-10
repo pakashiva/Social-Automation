@@ -217,22 +217,27 @@ def signup():
 def schedule_post():
     user_id = get_jwt_identity()
     input_text = request.form.get("schedule_task")
+    timezone = request.form.get("timezone")
 
     if not input_text:
         return "Schedule instruction is required.", 400
 
     cron_expression = convert_to_cron(input_text)
-    print(cron_expression)
+    print("CRON" , cron_expression)
+    print("TIME ZONE" , timezone)
 
     company = CompanyInfo.query.filter_by(user_id=user_id).first()
 
     if not company:
         company = CompanyInfo(
-            scheduled_time = cron_expression
+            user_id=user_id,
+            scheduled_time = cron_expression,
+            timezone = timezone
         )
         db.session.add(company)
     else:
         company.scheduled_time = cron_expression
+        company.timezone = timezone
 
     db.session.commit()    
 
@@ -251,7 +256,10 @@ def connect():
 
 # route to retrieve Auth code, token exchange , Saving in Database
 @app.route('/callback')
+@jwt_required()
 def callback():
+
+    user_id = get_jwt_identity()
     try:
         auth_code = retrive_auth_code()
     except ValueError as e:
@@ -268,7 +276,7 @@ def callback():
         return str(e), 500
 
     account = Account(
-    company_name="ABC Company",
+    user_id = user_id,
     access_token=access_token,
     author_urn=author_urn,
     expires_at=expires_at   
@@ -289,7 +297,10 @@ def connect_meta():
     return redirect(meta_url)
 
 @app.route("/meta_callback")
+@jwt_required()
 def meta_callback():
+
+    user_id = get_jwt_identity()
 
     # Step 1: Retrieve authorization code
     try:
@@ -347,6 +358,7 @@ def meta_callback():
 
     # Step 7: Save account
     account = Account(
+        user_id=user_id,
         page_name=page_name,
         page_id=page_id,
         page_access_token=page_token,

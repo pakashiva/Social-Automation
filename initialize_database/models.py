@@ -120,6 +120,17 @@ class CompanyInfo(db.Model):
     scheduled_time = db.Column(
         db.String(50)
     )
+    
+    timezone = db.Column(
+        db.String(50),
+        default="Asia/Kolkata",
+        nullable=False
+    )
+
+    last_scheduled_run_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
 
 
 # ============================================================

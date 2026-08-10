@@ -8,6 +8,7 @@
         <p class="lead">Choose when AI-generated posts should be automatically published and manage your calendar preferences.</p>
     </div>
 </section>
+
 <form id="schedule-form" class="form-card" method="POST" action="/schedule_post">
     <div class="form-section">
         <div class="form-section__header">
@@ -24,6 +25,55 @@
                 placeholder="Every Monday at 9 AM"
                 required>
             <span id="schedule-error" class="field-error"></span>
+        </label>
+
+        <label class="field-group">
+            <span>Time Zone</span>
+            <select id="timezone-select" name="timezone" required>
+                    <option value="Asia/Kolkata" selected>
+                        IST — India Standard Time
+                    </option>
+
+                    <option value="UTC">
+                        UTC — Coordinated Universal Time
+                    </option>
+
+                    <option value="Etc/GMT">
+                        GMT — Greenwich Mean Time
+                    </option>
+
+                    <option value="America/New_York">
+                        ET — Eastern Time
+                    </option>
+
+                    <option value="America/Chicago">
+                        CT — Central Time
+                    </option>
+
+                    <option value="America/Denver">
+                        MT — Mountain Time
+                    </option>
+
+                    <option value="America/Los_Angeles">
+                        PT — Pacific Time
+                    </option>
+
+                    <option value="Europe/Paris">
+                        CET — Central European Time
+                    </option>
+
+                    <option value="Europe/Helsinki">
+                        EET — Eastern European Time
+                    </option>
+
+                    <option value="Asia/Tokyo">
+                        JST — Japan Standard Time
+                    </option>
+
+                    <option value="Australia/Sydney">
+                        AET — Australian Eastern Time
+                    </option>
+            </select>
         </label>
 
         <button type="submit">Save Schedule</button>
