@@ -17,7 +17,7 @@ with app.app_context():
 
 url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/feed"
 
-def publish_to_facebook(message):
+def publish_to_facebook(message , user_id):
     try:
         response = requests.post(
         url,
@@ -33,9 +33,9 @@ def publish_to_facebook(message):
         response.raise_for_status()
 
         pulished_post = PublishedPost(
+            user_id = user_id,
             platform="Facebook",
-            caption=message,
-            linkedin_post_id=response.json().get("id"),
+            post_content=message,
         )
 
         try:
