@@ -1,4 +1,4 @@
-from langchain_ollama import ChatOllama , OllamaEmbeddings
+# from langchain_ollama import ChatOllama , OllamaEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI , GoogleGenerativeAIEmbeddings
 
 # llm = ChatOllama(
