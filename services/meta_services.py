@@ -162,13 +162,3 @@ def get_instagram_business(page_id, page_token):
 
     return response.json().get("instagram_business_account")
 
-
-def add_meta_to_database(account: Account):
-
-    try:
-        db.session.add(account)
-        db.session.commit()
-
-    except Exception:
-        db.session.rollback()
-        raise

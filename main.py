@@ -20,14 +20,12 @@ from flask_jwt_extended import (
     jwt_required,
 )
 from services.linkedin_services import (
-    add_to_database,
     get_author_urn,
     logging_in,
     retrive_auth_code,
     token_exchange,
 )
 from services.meta_services import (
-    add_meta_to_database,
     exchange_meta_token,
     get_instagram_business,
     get_long_lived_token,
@@ -36,7 +34,6 @@ from services.meta_services import (
     meta_login,
     retrieve_meta_auth_code,
 )
-
 
 load_dotenv()
 
@@ -275,13 +272,22 @@ def callback():
     except RuntimeError as e:
         return str(e), 500
 
-    account = Account(
-    user_id = user_id,
-    access_token=access_token,
-    author_urn=author_urn,
-    expires_at=expires_at   
-)
-    add_to_database(account)
+    account = Account.query.filter_by(user_id=user_id).first()
+
+    if account:
+        account.linkedin_access_token = access_token
+        account.author_urn = author_urn
+        account.linkedin_token_expires_at = expires_at
+    else:
+        account = Account(
+            user_id=user_id,
+            linkedin_access_token=access_token,
+            author_urn=author_urn,
+            linkedin_token_expires_at=expires_at
+        )
+        db.session.add(account)
+
+    db.session.commit()
 
     flash("LinkedIn Account connected Successfully" , "Success")
 
@@ -355,18 +361,24 @@ def meta_callback():
         else None
     )
 
+    account = Account.query.filter_by(user_id=user_id).first()
 
-    # Step 7: Save account
-    account = Account(
-        user_id=user_id,
-        page_name=page_name,
-        page_id=page_id,
-        page_access_token=page_token,
-        instagram_business_id=instagram_id,
-    )
+    if account:
+        account.page_name = page_name
+        account.page_id = page_id
+        account.page_access_token = page_token
+        account.instagram_business_id = instagram_id
+    else:
+        account = Account(
+            user_id=user_id,
+            page_name=page_name,
+            page_id=page_id,
+            page_access_token=page_token,
+            instagram_business_id=instagram_id
+        )
+        db.session.add(account)
 
-    add_meta_to_database(account)
-
+    db.session.commit()
     flash("Meta Account connected Successfully" , "Success")
     
     return redirect(url_for('oauth'))
@@ -427,12 +439,6 @@ def save_company_info():
         flash(f"{e} This is not good", "error")
         return redirect(url_for('company'))
 
-#     strategy_json = {
-#     "pillars": strategy.pillars,
-#     "brand_voice": strategy.brand_voice,
-#     "post_formats": strategy.post_formats,
-# }
-
     strategy_json = strategy.model_dump(mode="json")
 
     # Test serialization
@@ -448,7 +454,6 @@ def save_company_info():
         company.content_strategy_json = strategy_json
 
     else:
-
         company = CompanyInfo(
             user_id=user_id,
             brand_context=brand_context,

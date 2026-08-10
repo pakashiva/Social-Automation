@@ -5,4 +5,4 @@ from app import app, db
 def initialize_database():
     with app.app_context():
         db.create_all()
-        print(f"Database initialized successfully: {Config.DATABASE_PATH}")
+        print(f"Database initialized successfully")

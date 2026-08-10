@@ -1,4 +1,4 @@
-import os
+import os,  chromadb
 from pathlib import Path
 from typing import List
 
@@ -33,13 +33,20 @@ from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 # Configuration
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-CHROMA_PATH = BASE_DIR / "databases" / "chromadb"
+# BASE_DIR = Path(__file__).resolve().parent.parent
+# CHROMA_PATH = BASE_DIR / "databases" / "chromadb"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 20
 TOP_K = 5
 FINAL_K = 5
 
+
+
+client = chromadb.CloudClient(
+  api_key=os.getenv('CHROMA_API_KEY'),
+  tenant=os.getenv('TENANT_ID'),
+  database='file_embeddings'
+)
 
 # Load PDF
 
@@ -83,7 +90,7 @@ def create_vectorstore(chunks: List[Document], COLLECTION_NAME):
         documents=chunks,
         embedding=embeddings,
         collection_name=COLLECTION_NAME,
-        persist_directory=CHROMA_PATH,
+        client=client
     )
 
     print("Created Chroma database")
@@ -96,7 +103,7 @@ def load_vectorstore(COLLECTION_NAME):
     vectorstore = Chroma(
         collection_name=COLLECTION_NAME,
         embedding_function=embeddings,
-        persist_directory=CHROMA_PATH,
+        client=client
     )
     return vectorstore
 
@@ -108,13 +115,13 @@ def build_vector_store(COLLECTION_NAME , PDF_PATH):
     vectorstore = Chroma(
         collection_name=COLLECTION_NAME,
         embedding_function=embeddings,
-        persist_directory=CHROMA_PATH,
+        client=client
     )
 
       # If collection exists, delete all existing embeddings
     if vectorstore._collection.count() > 0:
         print(f"Existing collection found. Replacing it...")
-    vectorstore.delete_collection()
+        vectorstore.delete_collection()
     
     print("Creating new Chroma Database")
     docs = load_pdf(PDF_PATH)
@@ -241,26 +248,6 @@ def create_retriever(
     )
     return compression
 
-# Retrieve the relavent chunks.
-
-def retrive_chunks(
-        topic,
-):
-    vectorstore = build_vector_store()
-    retriever = create_retriever(
-        vectorstore
-    )
-
-    docs = retriever.invoke(
-        topic
-    )
-
-    data = ""
-    for i, doc in enumerate(docs, start=1):
-        data += doc.page_content + '\n\n'
-
-    return data
-
 
 # ====================================================
 # hybrid retreiver only
@@ -277,11 +264,10 @@ def retrieve_semantic_chunks(pillar, user_id):
 
     # Open the Chroma collection belonging to this user
 
-
     vectorstore = Chroma(
         collection_name=str(user_id),
-        persist_directory=str(CHROMA_PATH),
         embedding_function=embeddings,
+        client=client
     )
 
     # Build hybrid retriever for this user's collection

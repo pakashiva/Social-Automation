@@ -169,11 +169,3 @@ def get_published_posts(access_token, author_urn, count=20):
         )
 
     return response.json()
-
-def add_to_database(account : Account):
-    try:
-        db.session.add(account)
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        raise

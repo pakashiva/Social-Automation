@@ -45,6 +45,7 @@ class Account(db.Model):
     )
 
     # Meta
+    
     page_name = db.Column(db.String(255))
     page_id = db.Column(db.String(255))
     page_access_token = db.Column(db.Text)
