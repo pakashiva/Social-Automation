@@ -45,7 +45,7 @@ FINAL_K = 5
 client = chromadb.CloudClient(
   api_key=os.getenv('CHROMA_API_KEY'),
   tenant=os.getenv('TENANT_ID'),
-  database='file_embeddings'
+  database=os.getenv('file_embeddings')
 )
 
 # Load PDF

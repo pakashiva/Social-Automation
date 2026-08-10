@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -24,4 +23,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run scheduler
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CHROMA_API_KEY: ${{ secrets.CHROMA_API_KEY }}
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          CHROMA_DATABASE: ${{ secrets.CHROMA_DATABASE }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python scheduler.py
