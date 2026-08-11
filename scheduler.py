@@ -127,10 +127,7 @@ def execute_scheduled_content(user_id):
     print()
     print("[4/4] Calling publish_to_facebook()...")
 
-    publish_result = publish_to_facebook(
-        message=content,
-        user_id=user_id
-    )
+    publish_result = publish_to_facebook(message=content)
 
     print()
     print("[4/4] publish_to_facebook() completed successfully")

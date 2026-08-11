@@ -5,19 +5,36 @@ from initialize_database.models import PublishedPost , Account
 from app import app, db
 
 
-with app.app_context():
-    last_account = Account.query.order_by(Account.id.desc()).first()
+def get_user_info():
+    with app.app_context():
+        last_account = Account.query.order_by(Account.id.desc()).first()
 
-    if last_account:
-        PAGE_ID = last_account.page_id
-        PAGE_ACCESS_TOKEN = last_account.page_access_token
-    else:
-        PAGE_ID = None
-        PAGE_ACCESS_TOKEN = None
+        if last_account:
+            PAGE_ID = last_account.page_id
+            PAGE_ACCESS_TOKEN = last_account.page_access_token
+        else:
+            PAGE_ID = None
+            PAGE_ACCESS_TOKEN = None
 
-url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/feed"
+    return last_account , PAGE_ACCESS_TOKEN , PAGE_ID
 
-def publish_to_facebook(message, user_id):
+
+def publish_to_facebook(message):
+
+    account, PAGE_ACCESS_TOKEN , PAGE_ID = get_user_info()
+    user_id = account.user_id
+
+    if not account:
+        raise ValueError("No Facebook account found")
+
+    if not PAGE_ID:
+        raise ValueError("Facebook PAGE_ID is missing")
+
+    if not PAGE_ACCESS_TOKEN:
+        raise ValueError("Facebook PAGE_ACCESS_TOKEN is missing")
+
+    url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/feed"
+
     try:
         print("Starting Facebook publishing...")
         print("Message length:", len(message))
