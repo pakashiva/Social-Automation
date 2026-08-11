@@ -33,13 +33,13 @@ from services.meta_services import (
     retrieve_meta_auth_code,
 )
 
-import resource
+import psutil
 
 def log_memory(label):
-    usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    process = psutil.Process(os.getpid())
+    usage = process.memory_info().rss
 
-    # Linux reports KB
-    memory_mb = usage / 1024
+    memory_mb = usage / (1024 * 1024)
 
     print(f"[MEMORY] {label}: {memory_mb:.1f} MB")
 
