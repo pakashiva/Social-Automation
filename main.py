@@ -33,6 +33,16 @@ from services.meta_services import (
     retrieve_meta_auth_code,
 )
 
+import resource
+
+def log_memory(label):
+    usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+    # Linux reports KB
+    memory_mb = usage / 1024
+
+    print(f"[MEMORY] {label}: {memory_mb:.1f} MB")
+
 load_dotenv()
 
 UPLOAD_FOLDER = Path("uploads")
@@ -73,6 +83,8 @@ def render_page(template_name, title, active_page):
     return render_template(template_name, title=title, active_page=active_page)
 
 # Paging routing for the Flask application
+
+log_memory("after imports")
 
 @app.route("/")
 def home():
@@ -425,16 +437,29 @@ def save_company_info():
 
     try:
         from rag_system.rag_functions import build_vector_store
+
+        log_memory("before vector store")
         
         build_vector_store(COLLECTION_NAME=collection_name , PDF_PATH=pdf_path)
+
+        log_memory("after vector store")
+
     except Exception as e:
         print("ERROR:", e)
         traceback.print_exc()
         flash(str(e) , "error")
         return redirect(url_for("company"))
 
+    
+
     try:
+        log_memory("before strategy conversion")
+
+
         from pdf_to_json.strategy_loader import convert_pdf_to_strategy
+
+
+        log_memory("after strategy conversion")
 
         strategy = convert_pdf_to_strategy(pdf_path=pdf_path)
     except Exception as e:

@@ -17,38 +17,39 @@ with app.app_context():
 
 url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/feed"
 
-def publish_to_facebook(message , user_id):
+def publish_to_facebook(message, user_id):
     try:
+        print("Starting Facebook publishing...")
+        print("Message length:", len(message))
+
         response = requests.post(
-        url,
-        data={
-            "message": message,
-            "access_token": PAGE_ACCESS_TOKEN,
-        },
+            url,
+            data={
+                "message": message,
+                "access_token": PAGE_ACCESS_TOKEN,
+            },
+            timeout=60
         )
 
-        print("Status Code:", response.status_code)
-        print("\nPost published successfully!")
+        print("Facebook Status Code:", response.status_code)
+        print("Facebook Response:", response.text[:500])
 
         response.raise_for_status()
 
-        pulished_post = PublishedPost(
-            user_id = user_id,
+        published_post = PublishedPost(
+            user_id=user_id,
             platform="Facebook",
             post_content=message,
         )
 
-        try:
-            with app.app_context():
-                db.session.add(pulished_post)
-                db.session.commit()
-                print("Post saved to database successfully!")
-        except Exception as e:
-            db.session.rollback()
-            print("Error saving to database:", str(e))
-            raise
+        with app.app_context():
+            db.session.add(published_post)
+            db.session.commit()
+
+        print("Post saved to database successfully!")
 
         return response.json()
 
     except Exception as e:
-        return str(e)
+        print("FACEBOOK ERROR:", repr(e))
+        raise

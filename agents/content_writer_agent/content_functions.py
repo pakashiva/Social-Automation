@@ -4,6 +4,9 @@ from model import llm
 
 
 def generate_linkedin_content(topic , brand_voice , pillar  , post_format , pillar_guidlines):
+
+    print("ENTERED generate_linkedin_content")
+
     messages = [
     SystemMessage(content=LINKEDIN_PROMPT),
     HumanMessage(content=f"""
@@ -26,10 +29,12 @@ def generate_linkedin_content(topic , brand_voice , pillar  , post_format , pill
     ]
 
     generated_content = llm.invoke(messages)
-    if generated_content:
-        print("CONETENT GENERATED" , generated_content[:30])
+    if generated_content.content:
+        print("CONETENT GENERATED" , generated_content.content[:30])
+    else:
+        print("No content Generated")
 
-    return generated_content
+    return generated_content.content
 
 def generate_facebook_content(topic , brand_voice , pillar  , post_format):
     messages = [
