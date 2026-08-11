@@ -280,5 +280,8 @@ def retrieve_semantic_chunks(pillar, user_id):
     data = ""
     for i, doc in enumerate(docs, start=1):
             data += doc.page_content + '\n\n'
+
+    if data != "":
+        print("DATA REETRIEVED:" ,  data[:30])
     
     return data

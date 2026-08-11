@@ -26,6 +26,8 @@ def generate_linkedin_content(topic , brand_voice , pillar  , post_format , pill
     ]
 
     generated_content = llm.invoke(messages)
+    if generated_content:
+        print("CONETENT GENERATED" , generated_content[:30])
 
     return generated_content
 

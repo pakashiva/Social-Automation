@@ -25,59 +25,46 @@ def execute_scheduled_content(user_id):
                                     post_format=output.post_format , brand_voice=output.brand_voice,
                                     pillar_guidlines=data)
 
-        publish_to_facebook(post.content)
+        publish_to_facebook(message=post.content , user_id=user_id)
     except Exception as e:
         return str(e)
-
 
 def get_scheduled_occurrences(
     cron_expression,
     timezone_name,
-    now_utc
+    now_utc,
+    last_execution_utc=None
 ):
-    """
-    Return all cron occurrences that happened
-    during the previous one-hour window.
-    """
-
     user_timezone = ZoneInfo(timezone_name)
-
-    # Convert current UTC time to user's timezone
     now_local = now_utc.astimezone(user_timezone)
 
-    # One-hour window
-    window_start_local = (
-        now_local - timedelta(hours=1)
-    )
+    if last_execution_utc:
+        last_execution_local = last_execution_utc.replace(
+            tzinfo=timezone.utc
+        ).astimezone(user_timezone)
 
-    # Create cron iterator using the user's
-    # local time as the reference
-    cron = croniter(
-        cron_expression,
-        now_local
-    )
+        cron = croniter(
+            cron_expression,
+            last_execution_local
+        )
 
-    occurrences = []
+        occurrences = []
 
-    while True:
+        while True:
+            occurrence = cron.get_next(datetime)
 
-        occurrence = cron.get_prev(datetime)
+            if occurrence > now_local:
+                break
 
-        # Outside our one-hour window
-        if occurrence < window_start_local:
-            break
+            occurrences.append(occurrence)
 
-        # Do not process future occurrences
-        if occurrence > now_local:
-            continue
+        return occurrences
 
-        occurrences.append(occurrence)
+    # First-ever execution: only look for the latest occurrence
+    cron = croniter(cron_expression, now_local)
+    occurrence = cron.get_prev(datetime)
 
-    # croniter returns newest → oldest.
-    # Reverse so execution happens chronologically.
-    occurrences.reverse()
-
-    return occurrences
+    return [occurrence]
 
 def process_company_schedule(
     company,
@@ -92,10 +79,11 @@ def process_company_schedule(
         return
 
     occurrences = get_scheduled_occurrences(
-        cron_expression=company.scheduled_time,
-        timezone_name=company.timezone,
-        now_utc=now_utc
-    )
+    cron_expression=company.scheduled_time,
+    timezone_name=company.timezone,
+    now_utc=now_utc,
+    last_execution_utc=company.last_scheduled_run_at
+)
 
     if not occurrences:
         return
@@ -112,6 +100,8 @@ def process_company_schedule(
         occurrence_utc_naive = (
             occurrence_utc.replace(tzinfo=None)
         )
+
+        print("NAIVE",occurrence_utc_naive)
 
         # Already executed?
         if (
