@@ -1,15 +1,26 @@
-import os , json , traceback
-from uuid import uuid4
+print("STARTING MAIN.PY")
+
+import os, json, traceback
+print("CORE IMPORTS OK")
+
 from app import app, db
+print("APP IMPORT OK")
+
 from pathlib import Path
 from ruamel.yaml import YAML
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from app_configuration.app_config import Config
-from initialize_database.models import Account, PublishedPost, User , CompanyInfo
+print("CONFIG IMPORTS OK")
+
+from initialize_database.models import Account, PublishedPost, User, CompanyInfo
+print("MODEL IMPORTS OK")
+
 from datetime import UTC, datetime, timedelta
 from cron_converter.cron_conversion import convert_to_cron
 from werkzeug.security import check_password_hash, generate_password_hash
+print("GENERAL IMPORTS OK")
+
 from flask import Flask, flash, make_response, redirect, render_template, request, url_for
 from flask_jwt_extended import (
     JWTManager,
@@ -17,12 +28,16 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
 )
+print("FLASK IMPORTS OK")
+
 from services.linkedin_services import (
     get_author_urn,
     logging_in,
     retrive_auth_code,
     token_exchange,
 )
+print("LINKEDIN IMPORTS OK")
+
 from services.meta_services import (
     exchange_meta_token,
     get_instagram_business,
@@ -32,8 +47,10 @@ from services.meta_services import (
     meta_login,
     retrieve_meta_auth_code,
 )
+print("META IMPORTS OK")
 
 import psutil
+print("PSUTIL IMPORT OK")
 
 def log_memory(label):
     process = psutil.Process(os.getpid())
@@ -497,4 +514,8 @@ def save_company_info():
 
 
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False
+    )
