@@ -145,17 +145,17 @@ def login():
 
     if request.method == "POST":
 
+        email = request.form.get("email", "").strip().lower()
+
         print("🔥 LOGIN POST RECEIVED", flush=True)
 
-        email = request.form.get(
-            "email",
-            ""
-        ).strip().lower()
+        print("🔥 EMAIL RECEIVED:", email, flush=True)
 
-        password = request.form.get(
-            "password",
-            ""
-        )
+        password = request.form.get("password", "")
+        print("🔥 PASSWORD RECEIVED:", bool(password), flush=True)
+
+        print("🔥 ABOUT TO QUERY DATABASE", flush=True)
+
 
         user = User.query.filter_by(
             email=email

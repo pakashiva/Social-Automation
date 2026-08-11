@@ -2,39 +2,97 @@ from agents.content_writer_agent.content_prompt import FACEBOOK_PROMPT , INSTAGR
 from langchain_core.messages import HumanMessage , SystemMessage
 from model import llm
 
-
-def generate_linkedin_content(topic , brand_voice , pillar  , post_format , pillar_guidlines):
+def generate_linkedin_content(
+    topic,
+    brand_voice,
+    pillar,
+    post_format,
+    pillar_guidlines
+):
 
     print("ENTERED generate_linkedin_content")
 
     messages = [
-    SystemMessage(content=LINKEDIN_PROMPT),
-    HumanMessage(content=f"""
-    TOPIC
-    {topic}
+        SystemMessage(content=LINKEDIN_PROMPT),
 
-    CONTENT PILLAR
-    {pillar}
+        HumanMessage(content=f"""
+TOPIC
+{topic}
 
-    BRAND VOICE
-    {brand_voice}
+CONTENT PILLAR
+{pillar}
 
-    POST FORMAT
-    {post_format}
+BRAND VOICE
+{brand_voice}
 
-    PILLAR GUIDELINES
-    {pillar_guidlines}
+POST FORMAT
+{post_format}
 
-    """)
+PILLAR GUIDELINES
+{pillar_guidlines}
+""")
     ]
 
     generated_content = llm.invoke(messages)
-    if generated_content.content:
-        print("CONETENT GENERATED" , generated_content.content[:30])
-    else:
-        print("No content Generated")
 
-    return generated_content
+    print(
+        "LLM RESPONSE TYPE:",
+        type(generated_content)
+    )
+
+    raw_content = generated_content.content
+
+    print(
+        "RAW CONTENT TYPE:",
+        type(raw_content)
+    )
+
+    # -------------------------------------------------
+    # Extract ONLY the text from the content blocks
+    # -------------------------------------------------
+
+    if isinstance(raw_content, list):
+
+        content = ""
+
+        for block in raw_content:
+
+            if (
+                isinstance(block, dict)
+                and block.get("type") == "text"
+            ):
+                content += block.get("text", "")
+
+    elif isinstance(raw_content, str):
+
+        content = raw_content
+
+    else:
+
+        raise TypeError(
+            f"Unexpected LLM content type: "
+            f"{type(raw_content)}"
+        )
+
+    # -------------------------------------------------
+    # Validate
+    # -------------------------------------------------
+
+    if not content.strip():
+
+        raise ValueError(
+            "LLM returned empty content"
+        )
+
+    print("CONTENT GENERATED")
+    print("Final content type:", type(content))
+    print("Final content length:", len(content))
+    print("Final content preview:")
+    print(content[:300])
+
+    # IMPORTANT:
+    # Return ONLY the string
+    return content
 
 def generate_facebook_content(topic , brand_voice , pillar  , post_format):
     messages = [
