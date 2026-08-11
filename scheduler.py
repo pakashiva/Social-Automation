@@ -106,16 +106,7 @@ def execute_scheduled_content(user_id):
     # --------------------------------------------------------
     # Handle LangChain AIMessage
     # --------------------------------------------------------
-
-    if hasattr(post, "content"):
-        content = post.content
-    else:
-        content = post
-
-    if not content:
-        raise ValueError(
-            "Generated LinkedIn content is empty"
-        )
+    content = str(post)
 
     print("Generated content preview:")
     print(str(content)[:300])
