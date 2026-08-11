@@ -5,7 +5,7 @@ print("CORE IMPORTS OK")
 
 from app import app, db
 print("APP IMPORT OK")
-
+from uuid import uuid4
 from pathlib import Path
 from ruamel.yaml import YAML
 from dotenv import load_dotenv
@@ -141,8 +141,11 @@ def posts():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    print("🔥 LOGIN ROUTE HIT:", request.method, flush=True)
 
     if request.method == "POST":
+
+        print("🔥 LOGIN POST RECEIVED", flush=True)
 
         email = request.form.get(
             "email",
