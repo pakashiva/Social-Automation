@@ -3,10 +3,8 @@ from uuid import uuid4
 from app import app, db
 from pathlib import Path
 from ruamel.yaml import YAML
-from pdf_to_json.strategy_loader import convert_pdf_to_strategy
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
-from rag_system.rag_functions import build_vector_store
 from app_configuration.app_config import Config
 from initialize_database.models import Account, PublishedPost, User , CompanyInfo
 from datetime import UTC, datetime, timedelta
@@ -426,6 +424,8 @@ def save_company_info():
     collection_name = str(user_id)
 
     try:
+        from rag_system.rag_functions import build_vector_store
+        
         build_vector_store(COLLECTION_NAME=collection_name , PDF_PATH=pdf_path)
     except Exception as e:
         print("ERROR:", e)
@@ -434,6 +434,8 @@ def save_company_info():
         return redirect(url_for("company"))
 
     try:
+        from pdf_to_json.strategy_loader import convert_pdf_to_strategy
+
         strategy = convert_pdf_to_strategy(pdf_path=pdf_path)
     except Exception as e:
         flash(f"{e} This is not good", "error")
