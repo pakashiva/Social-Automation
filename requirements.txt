@@ -57,3 +57,5 @@ psycopg[binary] >= 3.3.4
 
 # server
 gunicorn>=26.0.0
+
+resource>=0.2.1
