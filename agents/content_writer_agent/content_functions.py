@@ -34,7 +34,7 @@ def generate_linkedin_content(topic , brand_voice , pillar  , post_format , pill
     else:
         print("No content Generated")
 
-    return generated_content.content
+    return generated_content
 
 def generate_facebook_content(topic , brand_voice , pillar  , post_format):
     messages = [
