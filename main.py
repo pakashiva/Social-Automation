@@ -162,6 +162,7 @@ def login():
         ).first()
 
         if not user:
+            print("GOT THE USER DATA", flush=True)
 
             flash("Invalid credentials." , "error")
             return redirect(url_for("login"))
@@ -175,6 +176,8 @@ def login():
 
             return redirect(url_for("login"))
 
+        print("GENERATING ACCESS TOKEN" , flush=True)
+
         access_token = create_access_token(
             identity=user.user_id
         )
@@ -182,6 +185,8 @@ def login():
         response = make_response(
             redirect(url_for("home"))
         )
+
+        print("SENDING COOKIE" , flush=True)
 
         response.set_cookie(
             "access_token",
@@ -191,6 +196,7 @@ def login():
             samesite="Lax"
         )
         flash("Logged in successfully." , "success")
+        print("RESPONSE SENT", flush=True)
 
         return response
 
