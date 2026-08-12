@@ -29,15 +29,26 @@
                 About Us
             </a>
 
-            <a href="{{ url_for('signup') }}"
-               class="nav-link{% if active_page == 'signup' %} active{% endif %}">
-                Sign Up
-            </a>
+            {% if logged_in %}
 
-            <a href="{{ url_for('login') }}"
-               class="nav-link{% if active_page == 'login' %} active{% endif %}">
-                Login
-            </a>
+                <a href="{{ url_for('logout') }}"
+                class="nav-link">
+                    Logout
+                </a>
+
+            {% else %}
+
+                <a href="{{ url_for('signup') }}"
+                class="nav-link{% if active_page == 'signup' %} active{% endif %}">
+                    Sign Up
+                </a>
+
+                <a href="{{ url_for('login') }}"
+                class="nav-link{% if active_page == 'login' %} active{% endif %}">
+                    Login
+                </a>
+
+            {% endif %}
         </nav>
     </header>
 
