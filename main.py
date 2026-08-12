@@ -30,9 +30,6 @@ mem("dotenv")
 from flask_sqlalchemy import SQLAlchemy
 mem("flask-sqlalchemy")
 
-from app_configuration.app_config import Config
-mem("Config")
-
 from initialize_database.models import Account, PublishedPost, User, CompanyInfo
 mem("models")
 
@@ -45,7 +42,7 @@ mem("cron-converter")
 from werkzeug.security import check_password_hash, generate_password_hash
 mem("werkzeug")
 
-from flask import Flask, flash, make_response, redirect, render_template, request, url_for
+from flask import flash, make_response, redirect, render_template, request, url_for
 mem("flask")
 
 from flask_jwt_extended import (
@@ -53,6 +50,8 @@ from flask_jwt_extended import (
     create_access_token,
     get_jwt_identity,
     jwt_required,
+    verify_jwt_in_request,
+    unset_jwt_cookies
 )
 mem("jwt")
 
@@ -109,6 +108,25 @@ def missing_token(reason):
 def revoked_token(jwt_header, jwt_payload):
     flash("Your session is no longer valid. Please log in again.", "warning")
     return redirect(url_for("login"))
+
+
+@app.context_processor
+def inject_auth_status():
+
+    try:
+        verify_jwt_in_request(optional=True)
+
+        user_id = get_jwt_identity()
+
+        return {
+            "logged_in": user_id is not None
+        }
+
+    except Exception:
+
+        return {
+            "logged_in": False
+        }
 
 
 def render_page(template_name, title, active_page):
@@ -530,6 +548,15 @@ def save_company_info():
     flash("Company information saved successfully." , "success")
 
     return redirect(url_for("company"))
+
+
+@app.route("/logout", methods=["POST", "GET"])
+def logout():
+
+    response = redirect(url_for("home"))
+    unset_jwt_cookies(response)
+    flash("You have been logged out successfully.", "success")
+    return response
 
 
 if __name__ == "__main__":
