@@ -141,12 +141,16 @@ def schedule():
     return render_page("schedule.html", "Schedule Content — CorpAI Media", "schedule")
 
 @app.route("/posts")
+@jwt_required
 def posts():
-    posts = PublishedPost.query.order_by(
-    PublishedPost.posted_at.desc()
-).all()
 
-    print("POSTS: " , posts)
+    user_id = get_jwt_identity()
+
+    posts = PublishedPost.query.filter_by(
+        user_id=user_id
+    ).order_by(
+        PublishedPost.posted_at.desc()
+    ).all()
 
     return render_template(
         "posts.html", title="Published Posts — CorpAI Media", active_page="posts", posts=posts
