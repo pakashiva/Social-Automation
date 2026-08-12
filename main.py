@@ -1,34 +1,60 @@
-print("STARTING MAIN.PY")
+import os
+import psutil
 
-import os, json, traceback
-print("CORE IMPORTS OK")
+process = psutil.Process(os.getpid())
+
+def mem(label):
+    rss = process.memory_info().rss / 1024 / 1024
+    print(f"[MEMORY] {label}: {rss:.1f} MB", flush=True)
+
+
+mem("startup")
+
+import json
+import traceback
+mem("json + traceback")
 
 from app import app, db
-print("APP IMPORT OK")
+mem("app")
+
 from uuid import uuid4
 from pathlib import Path
+mem("uuid + pathlib")
+
 from ruamel.yaml import YAML
+mem("ruamel")
+
 from dotenv import load_dotenv
+mem("dotenv")
+
 from flask_sqlalchemy import SQLAlchemy
+mem("flask-sqlalchemy")
+
 from app_configuration.app_config import Config
-print("CONFIG IMPORTS OK")
+mem("Config")
 
 from initialize_database.models import Account, PublishedPost, User, CompanyInfo
-print("MODEL IMPORTS OK")
+mem("models")
 
 from datetime import UTC, datetime, timedelta
+mem("datetime")
+
 from cron_converter.cron_conversion import convert_to_cron
+mem("cron-converter")
+
 from werkzeug.security import check_password_hash, generate_password_hash
-print("GENERAL IMPORTS OK")
+mem("werkzeug")
 
 from flask import Flask, flash, make_response, redirect, render_template, request, url_for
+mem("flask")
+
 from flask_jwt_extended import (
     JWTManager,
     create_access_token,
     get_jwt_identity,
     jwt_required,
 )
-print("FLASK IMPORTS OK")
+mem("jwt")
 
 from services.linkedin_services import (
     get_author_urn,
@@ -36,7 +62,7 @@ from services.linkedin_services import (
     retrive_auth_code,
     token_exchange,
 )
-print("LINKEDIN IMPORTS OK")
+mem("linkedin")
 
 from services.meta_services import (
     exchange_meta_token,
@@ -47,18 +73,7 @@ from services.meta_services import (
     meta_login,
     retrieve_meta_auth_code,
 )
-print("META IMPORTS OK")
-
-import psutil
-print("PSUTIL IMPORT OK")
-
-def log_memory(label):
-    process = psutil.Process(os.getpid())
-    usage = process.memory_info().rss
-
-    memory_mb = usage / (1024 * 1024)
-
-    print(f"[MEMORY] {label}: {memory_mb:.1f} MB")
+mem("meta")
 
 load_dotenv()
 
