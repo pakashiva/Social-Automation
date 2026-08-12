@@ -116,8 +116,6 @@ def render_page(template_name, title, active_page):
 
 # Paging routing for the Flask application
 
-log_memory("after imports")
-
 @app.route("/")
 def home():
     return render_page("home.html", "Home — CorpAI Media", "home")
@@ -479,11 +477,8 @@ def save_company_info():
     try:
         from rag_system.rag_functions import build_vector_store
 
-        log_memory("before vector store")
         
         build_vector_store(COLLECTION_NAME=collection_name , PDF_PATH=pdf_path)
-
-        log_memory("after vector store")
 
     except Exception as e:
         print("ERROR:", e)
@@ -494,13 +489,9 @@ def save_company_info():
     
 
     try:
-        log_memory("before strategy conversion")
-
 
         from pdf_to_json.strategy_loader import convert_pdf_to_strategy
 
-
-        log_memory("after strategy conversion")
 
         strategy = convert_pdf_to_strategy(pdf_path=pdf_path)
     except Exception as e:
