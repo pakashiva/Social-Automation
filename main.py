@@ -141,7 +141,7 @@ def schedule():
     return render_page("schedule.html", "Schedule Content — CorpAI Media", "schedule")
 
 @app.route("/posts")
-@jwt_required
+@jwt_required()
 def posts():
 
     user_id = get_jwt_identity()
