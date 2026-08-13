@@ -121,6 +121,8 @@ class CompanyInfo(db.Model):
     scheduled_time = db.Column(
         db.String(50)
     )
+
+    notify_check = db.Column(db.Boolean, nullable=False, default=False , server_default=db.false())
     
     timezone = db.Column(
         db.String(50),

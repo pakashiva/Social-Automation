@@ -1,36 +1,41 @@
 /* =========================================================
    CorpAI Media — Design tokens & global layout
-   Classic, editorial, enterprise. No animations.
+   Corporate, navy / white / light-gray. Soft shadows,
+   rounded cards, restrained hover motion.
+   (Selectors are unchanged from the original build — only
+   token values and a small number of visual rules changed,
+   so no id/class/name relied on by JS or the backend moved.)
    ========================================================= */
 
 :root {
-    --color-background: #f4f1ea;
-    --color-background-alt: #ebe6dc;
-    --color-surface: #fffcf7;
+    --color-background: #f3f5f8;
+    --color-background-alt: #e9edf3;
+    --color-surface: #fbfcfe;
     --color-surface-raised: #ffffff;
-    --color-text: #1c1917;
-    --color-text-secondary: #4a4540;
-    --color-muted: #6f6a63;
-    --color-border: #e4dfd4;
-    --color-border-strong: #cfc8ba;
-    --color-primary: #1e3a34;
-    --color-primary-hover: #162e29;
-    --color-primary-soft: #e8eeec;
-    --color-accent: #8a6a2f;
-    --color-accent-soft: #f3ead6;
-    --color-success: #2f5d45;
-    --color-success-bg: #e8f1eb;
-    --color-warning: #7a5c20;
-    --color-warning-bg: #f6eedc;
-    --color-error: #8b3a32;
-    --color-error-bg: #f6e8e6;
-    --color-info: #2f4a5d;
-    --color-info-bg: #e7eef3;
+    --color-text: #1c2733;
+    --color-text-secondary: #4d586a;
+    --color-muted: #5c6773;
+    --color-border: #dfe4ea;
+    --color-border-strong: #c7ced8;
+    --color-primary: #16294a;
+    --color-primary-hover: #0f1e38;
+    --color-primary-soft: #eaf0f9;
+    --color-accent: #2c4570;
+    --color-accent-soft: #eaf0f9;
+    --color-success: #1f7a4d;
+    --color-success-bg: #e7f4ec;
+    --color-warning: #8a6a1f;
+    --color-warning-bg: #f7f0dd;
+    --color-error: #b3261e;
+    --color-error-bg: #f9e9e8;
+    --color-info: #2c4570;
+    --color-info-bg: #eaf0f9;
     --color-linkedin: #0a66c2;
     --color-meta: #0866ff;
+    --color-on-primary: #ffffff;
 
     --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-    --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
 
     --text-display: 2.5rem;
     --text-h1: 2rem;
@@ -43,7 +48,7 @@
 
     --leading-tight: 1.2;
     --leading-snug: 1.35;
-    --leading-body: 1.65;
+    --leading-body: 1.6;
 
     --space-1: 4px;
     --space-2: 8px;
@@ -56,12 +61,14 @@
     --space-9: 48px;
     --space-10: 64px;
 
-    --radius-sm: 6px;
+    --radius-sm: 8px;
     --radius-md: 10px;
-    --radius-lg: 14px;
+    --radius-lg: 16px;
 
-    --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
-    --shadow-md: 0 8px 24px rgba(28, 25, 23, 0.06);
+    --shadow-sm: 0 2px 10px rgba(22, 41, 74, 0.06);
+    --shadow-md: 0 10px 28px rgba(22, 41, 74, 0.12);
+
+    --transition-soft: all 0.2s ease;
 
     --nav-height: 64px;
     --sidebar-width: 272px;
@@ -122,8 +129,8 @@ h3,
 h4 {
     font-family: var(--font-serif);
     font-weight: 600;
-    letter-spacing: -0.02em;
-    color: var(--color-text);
+    letter-spacing: -0.01em;
+    color: var(--color-primary);
     line-height: var(--leading-tight);
 }
 
@@ -175,8 +182,9 @@ ul {
     height: var(--nav-height);
     display: flex;
     align-items: center;
-    background: var(--color-surface-raised);
-    border-bottom: 1px solid var(--color-border);
+    background: var(--color-primary);
+    border-bottom: none;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
 .navbar__inner {
@@ -199,18 +207,19 @@ ul {
     display: none;
     width: 40px;
     height: 40px;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-sm);
     align-items: center;
     justify-content: center;
-    color: var(--color-text);
+    color: #fff;
+    transition: var(--transition-soft);
 }
 
 .menu-toggle:hover,
 .menu-toggle:focus-visible {
-    border-color: var(--color-primary);
-    background: var(--color-primary-soft);
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.18);
 }
 
 .brand {
@@ -226,8 +235,9 @@ ul {
     flex-shrink: 0;
     display: grid;
     place-items: center;
-    background: var(--color-primary);
+    background: rgba(255, 255, 255, 0.12);
     color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: var(--radius-sm);
 }
 
@@ -240,8 +250,9 @@ ul {
     font-family: var(--font-serif);
     font-size: 1.125rem;
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
     white-space: nowrap;
+    color: #fff;
 }
 
 .navbar__nav {
@@ -256,31 +267,33 @@ ul {
     height: 36px;
     padding: 0 var(--space-3);
     border-radius: var(--radius-sm);
-    color: var(--color-text-secondary);
+    color: rgba(255, 255, 255, 0.82);
     font-size: var(--text-secondary);
     font-weight: 500;
+    transition: var(--transition-soft);
 }
 
 .nav-link:hover,
 .nav-link:focus-visible {
-    color: var(--color-text);
-    background: var(--color-background-alt);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .nav-link.active {
-    color: var(--color-primary);
-    background: var(--color-primary-soft);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+    font-weight: 600;
 }
 
 .nav-link--emphasis {
-    background: var(--color-primary);
-    color: #fff;
+    background: #fff;
+    color: var(--color-primary);
 }
 
 .nav-link--emphasis:hover,
 .nav-link--emphasis:focus-visible {
-    background: var(--color-primary-hover);
-    color: #fff;
+    background: var(--color-background);
+    color: var(--color-primary);
 }
 
 /* ---------- App shell ---------- */
@@ -294,7 +307,7 @@ ul {
 .sidebar {
     flex: 0 0 var(--sidebar-width);
     width: var(--sidebar-width);
-    background: var(--color-surface);
+    background: var(--color-surface-raised);
     border-right: 1px solid var(--color-border);
     padding: var(--space-7) var(--space-5);
     position: sticky;
@@ -310,7 +323,7 @@ ul {
 .sidebar__title {
     font-size: 0.6875rem;
     font-weight: 600;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--color-muted);
     margin-bottom: var(--space-3);
@@ -326,7 +339,8 @@ ul {
     color: var(--color-text-secondary);
     font-size: var(--text-secondary);
     font-weight: 500;
-    border: 1px solid transparent;
+    border-left: 3px solid transparent;
+    transition: var(--transition-soft);
 }
 
 .sidebar-link svg {
@@ -342,14 +356,15 @@ ul {
 
 .sidebar-link:hover,
 .sidebar-link:focus-visible {
-    color: var(--color-text);
+    color: var(--color-primary);
     background: var(--color-background);
 }
 
 .sidebar-link.active {
     color: var(--color-primary);
     background: var(--color-primary-soft);
-    border-color: transparent;
+    border-left: 3px solid var(--color-primary);
+    font-weight: 600;
 }
 
 .sidebar-backdrop {
@@ -390,7 +405,7 @@ body.is-auth .sidebar-backdrop {
     margin: 0 0 var(--space-3);
     font-size: 0.75rem;
     font-weight: 600;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--color-accent);
 }
@@ -469,7 +484,7 @@ body.is-auth .flash-container {
     font-family: var(--font-serif);
     font-size: 2rem;
     font-weight: 600;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
     color: var(--color-primary);
     line-height: 1;
 }
@@ -609,7 +624,7 @@ body.is-auth .flash-container {
         display: block;
         position: fixed;
         inset: var(--nav-height) 0 0 0;
-        background: rgba(28, 25, 23, 0.28);
+        background: rgba(22, 41, 74, 0.32);
         z-index: 25;
     }
 
@@ -669,4 +684,80 @@ body.is-auth .flash-container {
     .site-footer {
         flex-direction: column;
     }
+}
+
+/* =========================================================
+   Notification checkbox
+   ========================================================= */
+
+.notification-field {
+    margin-top: 32px;
+}
+
+.notification-checkbox {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-top: 10px;
+    width: auto !important;
+    min-height: 0 !important;
+}
+
+/* Completely reset the generic .field-group input styles */
+.notification-checkbox > input#notify-check {
+    all: unset;
+
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+
+    flex: 0 0 18px !important;
+
+    box-sizing: border-box !important;
+
+    display: block !important;
+
+    border: 1.5px solid #9ca3af !important;
+    border-radius: 4px !important;
+
+    background: #ffffff !important;
+
+    cursor: pointer !important;
+}
+
+/* Checked */
+.notification-checkbox > input#notify-check:checked {
+    background: #16294a !important;
+    border-color: #16294a !important;
+}
+
+/* Check mark */
+.notification-checkbox > input#notify-check:checked::after {
+    content: "✓";
+    display: block;
+    width: 100%;
+    height: 100%;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+}
+
+/* Text beside checkbox */
+.notification-checkbox > span {
+    display: inline !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    line-height: 18px !important;
+    color: #374151 !important;
+
+    cursor: pointer;
 }

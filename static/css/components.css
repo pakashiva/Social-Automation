@@ -1,5 +1,7 @@
 /* =========================================================
    CorpAI Media — Reusable components
+   Corporate, navy / white / light-gray. Soft shadows,
+   rounded cards, restrained hover motion.
    ========================================================= */
 
 .card,
@@ -11,8 +13,16 @@
 .stat-card {
     background: var(--color-surface-raised);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
+    transition: var(--transition-soft);
+}
+
+.card:hover,
+.platform-card:hover,
+.post-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .card {
@@ -36,7 +46,7 @@
 
 .card--highlight {
     background: var(--color-primary-soft);
-    border-color: #d5e0dc;
+    border-color: #d3ddec;
 }
 
 .card--feature {
@@ -50,6 +60,16 @@
 
 .hero-card {
     padding: var(--space-8);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+    border-color: transparent;
+}
+
+.hero-card h2 {
+    color: #fff;
+}
+
+.hero-card p {
+    color: rgba(255, 255, 255, 0.82);
 }
 
 .hero-card__content {
@@ -62,7 +82,15 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-5);
     padding-top: var(--space-5);
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.hero-card__stats .stat-value {
+    color: #fff;
+}
+
+.hero-card__stats .stat-label {
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .stat-card {
@@ -103,6 +131,7 @@
     text-align: center;
     background: var(--color-background-alt);
     color: var(--color-text);
+    transition: var(--transition-soft);
 }
 
 .button:hover,
@@ -154,7 +183,7 @@ select:focus-visible {
 .button--destructive,
 .btn-destructive {
     background: var(--color-surface-raised);
-    border-color: #d7b4af;
+    border-color: #e3b9b4;
     color: var(--color-error);
 }
 
@@ -180,6 +209,7 @@ select:focus-visible {
     color: var(--color-text);
     font-weight: 600;
     font-size: var(--text-secondary);
+    transition: var(--transition-soft);
 }
 
 .pdf-template-button:hover,
@@ -225,7 +255,7 @@ select:focus-visible {
 .form-label {
     font-size: var(--text-label);
     font-weight: 600;
-    color: var(--color-text);
+    color: var(--color-primary);
 }
 
 .field-help {
@@ -244,10 +274,11 @@ select:focus-visible {
     padding: 10px 14px;
     border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-sm);
-    background: var(--color-surface-raised);
+    background: var(--color-background);
     color: var(--color-text);
     display: block;
     box-sizing: border-box;
+    transition: var(--transition-soft);
 }
 
 .field-group textarea {
@@ -260,7 +291,8 @@ select:focus-visible {
 .field-group textarea:hover,
 .field-group select:hover,
 #timezone-select:hover {
-    border-color: #b7b09f;
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-raised);
 }
 
 .field-group input:focus,
@@ -269,6 +301,7 @@ select:focus-visible {
 #timezone-select:focus {
     outline: none;
     border-color: var(--color-primary);
+    background: var(--color-surface-raised);
     box-shadow: 0 0 0 3px var(--color-primary-soft);
 }
 
@@ -321,26 +354,26 @@ select:focus-visible {
 .alert-success,
 .alert-Success {
     background: var(--color-success-bg);
-    border-color: #c5d9cc;
+    border-color: #c3ddc9;
     color: var(--color-success);
 }
 
 .alert-error,
 .alert-danger {
     background: var(--color-error-bg);
-    border-color: #e0c4c0;
+    border-color: #e5c2be;
     color: var(--color-error);
 }
 
 .alert-warning {
     background: var(--color-warning-bg);
-    border-color: #e4d4b0;
+    border-color: #e6d6a4;
     color: var(--color-warning);
 }
 
 .alert-info {
     background: var(--color-info-bg);
-    border-color: #c5d3de;
+    border-color: #c6d4e6;
     color: var(--color-info);
 }
 
@@ -380,14 +413,14 @@ select:focus-visible {
 .badge--connected {
     background: var(--color-success-bg);
     color: var(--color-success);
-    border-color: #c5d9cc;
+    border-color: #c3ddc9;
 }
 
 .badge--scheduled,
 .badge--pending {
     background: var(--color-warning-bg);
     color: var(--color-warning);
-    border-color: #e4d4b0;
+    border-color: #e6d6a4;
 }
 
 .badge--draft,
@@ -399,7 +432,7 @@ select:focus-visible {
 .badge--failed {
     background: var(--color-error-bg);
     color: var(--color-error);
-    border-color: #e0c4c0;
+    border-color: #e5c2be;
 }
 
 .badge--linkedin {
@@ -474,6 +507,7 @@ select:focus-visible {
 .error-state-card {
     text-align: center;
     padding: var(--space-10) var(--space-7);
+    border-style: dashed;
 }
 
 .empty-state-card__icon,
@@ -482,11 +516,11 @@ select:focus-visible {
     height: 56px;
     margin: 0 auto var(--space-5);
     border-radius: var(--radius-md);
-    background: var(--color-background);
+    background: var(--color-primary-soft);
     border: 1px solid var(--color-border);
     display: grid;
     place-items: center;
-    color: var(--color-muted);
+    color: var(--color-primary);
 }
 
 .empty-state-illustration {
@@ -515,7 +549,7 @@ select:focus-visible {
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: var(--space-2);
     padding: var(--space-3);
-    background: var(--color-surface-raised);
+    background: var(--color-background);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
 }
@@ -526,9 +560,10 @@ select:focus-visible {
     display: grid;
     place-items: center;
     border-radius: var(--radius-sm);
-    background: var(--color-background);
+    background: var(--color-surface-raised);
     color: var(--color-text);
     border: 1px solid transparent;
+    transition: var(--transition-soft);
 }
 
 .calendar-day:hover,
@@ -540,6 +575,7 @@ select:focus-visible {
 .calendar-day.selected {
     background: var(--color-primary);
     color: #fff;
+    font-weight: 600;
 }
 
 .selected-dates-panel {
