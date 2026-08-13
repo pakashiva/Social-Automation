@@ -3,41 +3,66 @@
 {% block content %}
 <section class="page-header">
     <div>
-        <p class="eyebrow">AI Corporate Publishing</p>
-        <h1>AI Social Media Automation Dashboard</h1>
-        <p class="lead">Connect your social accounts, upload company information, schedule content, and automatically publish posts with a secure enterprise workflow.</p>
+        <p class="eyebrow">Corporate publishing</p>
+        <h1>A calm workspace for social media operations</h1>
+        <p class="lead">Connect accounts, capture company context, schedule publishing, and review what has gone live — without changing how your teams already work.</p>
     </div>
 </section>
 
-<section class="grid-two-cards">
+<section class="section grid-two">
     <article class="card card--highlight">
-        <h2>Streamline corporate publishing</h2>
-        <p>Standardize brand voice, optimize post cadence, and deliver consistent messaging across LinkedIn, Facebook, and Instagram.</p>
+        <h2>For marketing teams</h2>
+        <p>Keep brand voice, cadence, and channel coverage consistent across LinkedIn, Facebook, and Instagram from one place.</p>
     </article>
     <article class="card">
-        <h2>Review and manage at a glance</h2>
-        <p>Monitor content strategy, scheduling, and published posts in one professional dashboard without requiring backend setup.</p>
+        <h2>For technical teams</h2>
+        <p>OAuth connections, scheduled publishing, and company data stay in a clear workflow that maps directly to existing routes and actions.</p>
     </article>
 </section>
 
-<section class="hero-card">
-    <div class="hero-card__content">
-        <h2>Build a resilient content pipeline</h2>
-        <p>Use AI-guided planning and automated scheduling to ensure your corporate communication is timely, accurate, and aligned with strategic goals.</p>
-        <div class="hero-card__stats">
-            <div>
-                <span class="stat-value">4</span>
-                <span class="stat-label">Core workflows</span>
-            </div>
-            <div>
-                <span class="stat-value">3</span>
-                <span class="stat-label">Connected platforms</span>
-            </div>
-            <div>
-                <span class="stat-value">0</span>
-                <span class="stat-label">Backend integrations</span>
+<section class="section">
+    <article class="hero-card">
+        <div class="hero-card__content">
+            <h2>Four steps, one publishing pipeline</h2>
+            <p>Use the workspace in the order your teams already follow: connect platforms, provide company context, set a schedule, then review published posts.</p>
+            <div class="hero-card__stats">
+                <div>
+                    <span class="stat-value">4</span>
+                    <span class="stat-label">Core workflows</span>
+                </div>
+                <div>
+                    <span class="stat-value">3</span>
+                    <span class="stat-label">Connected platforms</span>
+                </div>
+                <div>
+                    <span class="stat-value">0</span>
+                    <span class="stat-label">Backend integrations</span>
+                </div>
             </div>
         </div>
-    </div>
+    </article>
+</section>
+
+<section class="section grid-four">
+    <article class="card">
+        <h3>Social accounts</h3>
+        <p>Connect LinkedIn and Meta with OAuth. Passwords are never stored.</p>
+        <a class="card-link" href="{{ url_for('oauth') }}">Open integrations</a>
+    </article>
+    <article class="card">
+        <h3>Company data</h3>
+        <p>Upload strategy and brand context so generated content stays on-brief.</p>
+        <a class="card-link" href="{{ url_for('company') }}">Add company data</a>
+    </article>
+    <article class="card">
+        <h3>Schedule</h3>
+        <p>Describe when posts should publish in plain language, then save.</p>
+        <a class="card-link" href="{{ url_for('schedule') }}">Set a schedule</a>
+    </article>
+    <article class="card">
+        <h3>Published posts</h3>
+        <p>Review captions, images, and platforms after content has gone live.</p>
+        <a class="card-link" href="{{ url_for('posts') }}">View posts</a>
+    </article>
 </section>
 {% endblock %}

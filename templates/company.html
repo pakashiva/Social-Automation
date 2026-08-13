@@ -5,13 +5,13 @@
     <div>
         <p class="eyebrow">Company information</p>
         <h1>Company Information</h1>
-        <p class="lead">Provide strategic context and brand guidance to help the AI produce corporate-ready content.</p>
+        <p class="lead">Provide strategic context and brand guidance so generated content stays accurate, on-voice, and useful to your audience.</p>
             <p class="template-link">
                 <a href="{{ url_for('static', filename='documents/Pillars_Voice_Format.pdf') }}"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="pdf-template-button">
-                    📄 View the recommended PDF template ↗
+                    View the recommended PDF template
                 </a>
             </p>
     </div>
@@ -26,10 +26,11 @@
     <div class="form-section">
         <div class="form-section__header">
             <h2>Content Strategy</h2>
-            <p>Upload your organization's content strategy document. This helps the AI understand marketing objectives, audience, and messaging priorities.</p>
+            <p>Upload your organization's content strategy document. This helps the system understand marketing objectives, audience, and messaging priorities.</p>
         </div>
-        <label class="field-group">
+        <label class="field-group file-input">
             <span>PDF Upload</span>
+            <span class="field-help">Accepted format: PDF only.</span>
                <input
                     id="strategy-file"
                     name="strategy_pdf"
@@ -44,10 +45,11 @@
     <div class="form-section">
         <div class="form-section__header">
             <h2>Brand Context</h2>
-            <p>Describe your company, products, services, target audience, tone of voice, mission, competitors, and any important information that should guide AI-generated content.</p>
+            <p>Describe your company, products, services, target audience, tone of voice, mission, competitors, and any important information that should guide generated content.</p>
         </div>
         <label class="field-group field-group--textarea">
             <span>Brand Context</span>
+            <span class="field-help">Minimum 100 characters. Maximum 10,000 characters.</span>
             <textarea id="brand-context" name="brand_context" rows="10" minlength="100" maxlength="10000"
              placeholder="Describe your company, products, services, target audience, tone of voice, mission, 
              competitors, and any important information that should guide AI-generated content." required></textarea>

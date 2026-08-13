@@ -8,36 +8,40 @@
         <form class="form-card" method="POST" action="{{ url_for('signup') }}">
 
             <div class="auth-title">
-                <p class="eyebrow">Create Account</p>
+                <p class="eyebrow">Create account</p>
                 <h1>Sign Up</h1>
             </div>
 
             <p class="auth-subtitle">
-                Join us and get started.
+                Create a workspace account to start publishing.
             </p>
 
             <div class="field-group">
-                <label>Full Name</label>
-                <input type="text" name="name" required>
+                <label for="name">Full Name</label>
+                <span class="field-help">Your name as it should appear in the workspace.</span>
+                <input id="name" type="text" name="name" autocomplete="name" required>
             </div>
 
             <div class="field-group">
-                <label>Email</label>
-                <input type="email" name="email" required>
+                <label for="email">Email</label>
+                <span class="field-help">This will be used to sign in.</span>
+                <input id="email" type="email" name="email" autocomplete="email" required>
             </div>
 
             <div class="field-group">
-                <label>Password</label>
-                <input type="password" name="password" required>
+                <label for="password">Password</label>
+                <span class="field-help">Choose a strong password for this account.</span>
+                <input id="password" type="password" name="password" autocomplete="new-password" required>
             </div>
 
             <div class="field-group">
-                <label>Confirm Password</label>
-                <input type="password" name="confirm_password" required>
+                <label for="confirm_password">Confirm Password</label>
+                <span class="field-help">Re-enter the same password to confirm.</span>
+                <input id="confirm_password" type="password" name="confirm_password" autocomplete="new-password" required>
             </div>
 
             <div class="form-actions">
-                <button class="button button--primary" type="submit">
+                <button class="button button--primary button--block" type="submit">
                     Create Account
                 </button>
             </div>

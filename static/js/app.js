@@ -1,5 +1,51 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    const menuToggle = document.getElementById('menu-toggle');
+    const sidebar = document.getElementById('app-sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+
+    const closeNav = () => {
+        document.body.classList.remove('nav-open');
+        if (menuToggle) {
+            menuToggle.setAttribute('aria-expanded', 'false');
+            menuToggle.setAttribute('aria-label', 'Open navigation');
+        }
+        if (backdrop) {
+            backdrop.hidden = true;
+        }
+    };
+
+    const openNav = () => {
+        document.body.classList.add('nav-open');
+        if (menuToggle) {
+            menuToggle.setAttribute('aria-expanded', 'true');
+            menuToggle.setAttribute('aria-label', 'Close navigation');
+        }
+        if (backdrop) {
+            backdrop.hidden = false;
+        }
+    };
+
+    if (menuToggle && sidebar) {
+        menuToggle.addEventListener('click', () => {
+            if (document.body.classList.contains('nav-open')) {
+                closeNav();
+            } else {
+                openNav();
+            }
+        });
+    }
+
+    if (backdrop) {
+        backdrop.addEventListener('click', closeNav);
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeNav();
+        }
+    });
+
     const strategyFile = document.getElementById('strategy-file');
     const strategyFilename = document.getElementById('strategy-filename');
     const strategyError = document.getElementById('strategy-error');
