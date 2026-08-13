@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <div class="eyebrow">Content Studio</div>
+
+    <h1>Create Content</h1>
+
+    <p class="lead">
+        Create, refine, and publish content for your connected social media
+        accounts using your company's content strategy and brand context.
+    </p>
+</div>
+
+
+<div class="content-studio">
+
+    <!-- CONTENT SETUP -->
+    <section class="form-card">
+
+        <div class="form-section">
+
+            <div class="form-section__header">
+                <h2>Content Setup</h2>
+                <p>
+                    Choose how you want to create your content.
+                </p>
+            </div>
+
+
+            <!-- Content Source -->
+            <label class="field-group">
+
+                <span>Content Source</span>
+
+                <select
+                    id="content-source"
+                    name="content_source">
+
+                    <option value="inspiration">
+                        Inspiration
+                    </option>
+
+                    <option value="existing_post">
+                        Existing Post
+                    </option>
+
+                    <option value="generate">
+                        Generate New Content
+                    </option>
+
+                </select>
+
+                <span class="field-help" id="source-help">
+                    Give the AI an idea or direction and it will create
+                    content around it.
+                </span>
+
+            </label>
+
+
+            <!-- Platform -->
+            <label class="field-group">
+
+                <span>Platform</span>
+
+                <select
+                    id="content-platform"
+                    name="platform">
+
+                    <option value="linkedin">
+                        LinkedIn
+                    </option>
+
+                    <option value="facebook">
+                        Facebook
+                    </option>
+
+                    <option value="instagram">
+                        Instagram
+                    </option>
+
+                </select>
+
+                <span class="field-help">
+                    The generated content will be optimized for the selected
+                    platform.
+                </span>
+
+            </label>
+
+
+            <!-- User Input -->
+            <div
+                class="field-group"
+                id="content-input-wrapper">
+
+                <label for="content-input" class="form-label">
+                    Your Input
+                </label>
+
+                <textarea
+                    id="content-input"
+                    name="content_input"
+                    placeholder="Share your idea or inspiration..."
+                    rows="9"></textarea>
+
+                <div class="field-meta">
+
+                    <span id="input-help">
+                        You can provide an idea, topic, reference, or direction.
+                    </span>
+
+                    <span id="character-count">
+                        0 characters
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- Generate Button -->
+            <div class="form-actions">
+
+                <button
+                    type="button"
+                    id="generate-content"
+                    class="button button--primary">
+
+                    Generate Content
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- GENERATED CONTENT -->
+    <section
+        class="content-result card"
+        id="content-result"
+        hidden>
+
+        <div class="content-result__header">
+
+            <div>
+                <div class="eyebrow">Generated Draft</div>
+
+                <h2>Review Your Content</h2>
+
+                <p>
+                    Review or edit the generated content before publishing.
+                </p>
+            </div>
+
+            <span class="badge badge--draft" id="content-status">
+                Draft
+            </span>
+
+        </div>
+
+
+        <!-- Generated content -->
+        <div class="field-group">
+
+            <label
+                for="generated-content"
+                class="form-label">
+
+                Post Content
+
+            </label>
+
+            <textarea
+                id="generated-content"
+                name="generated_content"
+                rows="14"
+                placeholder="Your generated content will appear here..."></textarea>
+
+            <div class="field-meta">
+
+                <span>
+                    You can edit the generated content before publishing.
+                </span>
+
+                <span id="generated-character-count">
+                    0 characters
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- Actions -->
+        <div class="content-result__actions">
+
+            <button
+                type="button"
+                class="button button--secondary"
+                id="regenerate-content">
+
+                Regenerate
+
+            </button>
+
+
+            <div class="content-result__publish-actions">
+
+                <button
+                    type="button"
+                    class="button button--secondary"
+                    id="schedule-content">
+
+                    Schedule for Later
+
+                </button>
+
+                <button
+                    type="button"
+                    class="button button--primary"
+                    id="publish-content">
+
+                    Publish Now
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const sourceSelect =
+        document.getElementById("content-source");
+
+    const input =
+        document.getElementById("content-input");
+
+    const sourceHelp =
+        document.getElementById("source-help");
+
+    const inputHelp =
+        document.getElementById("input-help");
+
+    const characterCount =
+        document.getElementById("character-count");
+
+    const generatedContent =
+        document.getElementById("generated-content");
+
+    const generatedCharacterCount =
+        document.getElementById("generated-character-count");
+
+    const result =
+        document.getElementById("content-result");
+
+
+    function updateSourceUI() {
+
+        const source = sourceSelect.value;
+
+        if (source === "inspiration") {
+
+            input.placeholder =
+                "Example: AI agents are changing how companies handle customer support. Create a thought-leadership post around this idea.";
+
+            sourceHelp.textContent =
+                "Give the AI an idea, topic, reference, or direction. It will create the post using your company's strategy and brand voice.";
+
+            inputHelp.textContent =
+                "Your input can be short. Focus on the idea you want the post to communicate.";
+
+        }
+
+        else if (source === "existing_post") {
+
+            input.placeholder =
+                "Paste your existing post here. The AI will refine it while preserving the original message.";
+
+            sourceHelp.textContent =
+                "Provide a complete existing post and the AI will refine it according to your brand voice and platform.";
+
+            inputHelp.textContent =
+                "The original meaning and intent will be preserved while improving clarity, structure, and tone.";
+
+        }
+
+        else {
+
+            input.placeholder =
+                "Optional: provide a topic, instruction, or specific direction. Leave empty to let the AI decide.";
+
+            sourceHelp.textContent =
+                "The AI will generate content using your company information, content strategy, and knowledge base.";
+
+            inputHelp.textContent =
+                "This field is optional. You can leave it empty for fully automatic content generation.";
+
+        }
+
+        updateCharacterCount();
+
+    }
+
+
+    function updateCharacterCount() {
+
+        characterCount.textContent =
+            `${input.value.length} characters`;
+
+    }
+
+
+    function updateGeneratedCharacterCount() {
+
+        generatedCharacterCount.textContent =
+            `${generatedContent.value.length} characters`;
+
+    }
+
+
+    sourceSelect.addEventListener(
+        "change",
+        updateSourceUI
+    );
+
+
+    input.addEventListener(
+        "input",
+        updateCharacterCount
+    );
+
+
+    generatedContent.addEventListener(
+        "input",
+        updateGeneratedCharacterCount
+    );
+
+
+    /*
+     * Backend integration will be added here.
+     *
+     * Generate:
+     * POST /generate_content
+     *
+     * Publish:
+     * POST /publish_content
+     *
+     * Schedule:
+     * POST /schedule_content
+     */
+
+    document
+        .getElementById("generate-content")
+        .addEventListener("click", function () {
+
+            /*
+             * Temporary frontend behavior.
+             * Replace with your backend API call.
+             */
+
+            result.hidden = false;
+
+            generatedContent.value =
+                "Generated content will appear here after connecting the backend.";
+
+            updateGeneratedCharacterCount();
+
+            result.scrollIntoView({
+                behavior: "auto",
+                block: "start"
+            });
+
+        });
+
+
+    document
+        .getElementById("regenerate-content")
+        .addEventListener("click", function () {
+
+            /*
+             * Connect to your regeneration endpoint.
+             */
+
+            console.log("Regenerate content");
+
+        });
+
+
+    document
+        .getElementById("publish-content")
+        .addEventListener("click", function () {
+
+            /*
+             * Connect to your publishing endpoint.
+             */
+
+            console.log("Publish content");
+
+        });
+
+
+    document
+        .getElementById("schedule-content")
+        .addEventListener("click", function () {
+
+            /*
+             * Open your scheduling UI/modal here.
+             */
+
+            console.log("Schedule content");
+
+        });
+
+
+    updateSourceUI();
+
+});
+
+</script>
+
+{% endblock %}

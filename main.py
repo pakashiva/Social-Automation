@@ -158,6 +158,15 @@ def company():
 def schedule():
     return render_page("schedule.html", "Schedule Content — CorpAI Media", "schedule")
 
+@app.route("/create_content")
+@jwt_required()
+def create_content():
+    return render_page(
+        "create_content.html",
+        "Create Content — CorpAI Media",
+        "create_content"
+    )
+
 @app.route("/posts")
 @jwt_required()
 def posts():

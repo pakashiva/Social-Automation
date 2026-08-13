@@ -109,6 +109,13 @@
                     Company Data
                 </a>
 
+                <a href="{{ url_for('create_content') }}"
+                    class="sidebar-link{% if active_page == 'create_content' %} active{% endif %}">
+                    <!-- create/edit icon -->
+                    Create Content
+                </a>
+
+
                 <a href="{{ url_for('schedule') }}"
                    class="sidebar-link{% if active_page == 'schedule' %} active{% endif %}">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
