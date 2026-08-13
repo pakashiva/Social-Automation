@@ -136,35 +136,45 @@ def render_page(template_name, title, active_page):
 
 @app.route("/")
 def home():
-    return render_page("home.html", "Home — CorpAI Media", "home")
+    return render_page("home.html", "Home — ELVA SocialAI", "home")
 
 
 @app.route("/about")
 def about():
-    return render_page("about.html", "About Us — CorpAI Media", "about")
+    return render_page("about.html", "About Us — ELVA SocialAI", "about")
 
 
 @app.route("/oauth")
 def oauth():
-    return render_page("oauth.html", "OAuth Login — CorpAI Media", "oauth")
+    return render_page("oauth.html", "OAuth Login — ELVA SocialAI", "oauth")
 
 
 @app.route("/company")
 def company():
-    return render_page("company.html", "Company Data — CorpAI Media", "company")
+    return render_page("company.html", "Company Data — ELVA SocialAI", "company")
 
 
 @app.route("/schedule")
 def schedule():
-    return render_page("schedule.html", "Schedule Content — CorpAI Media", "schedule")
+    return render_page("schedule.html", "Schedule Content — ELVA SocialAI", "schedule")
 
 @app.route("/create_content")
 @jwt_required()
 def create_content():
     return render_page(
         "create_content.html",
-        "Create Content — CorpAI Media",
+        "Create Content — ELVA SocialAI",
         "create_content"
+    )
+
+@app.route("/content-calendar", methods=["GET"])
+@jwt_required()
+def content_calendar():
+
+    return render_page(
+        "content_calendar.html",
+        "Content Calendar — ELVA SocialAI",
+        "content_calendar"
     )
 
 @app.route("/posts")
@@ -180,7 +190,7 @@ def posts():
     ).all()
 
     return render_template(
-        "posts.html", title="Published Posts — CorpAI Media", active_page="posts", posts=posts
+        "posts.html", title="Published Posts — ELVA SocialAI", active_page="posts", posts=posts
     )
 
 @app.route("/login", methods=["GET", "POST"])
@@ -285,7 +295,7 @@ def signup():
 
     return render_page(
         "signup.html",
-        "Sign Up — CorpAI Media",
+        "Sign Up — ELVA SocialAI",
         "signup"
     )
 

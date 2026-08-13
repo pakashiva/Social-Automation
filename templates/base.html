@@ -38,7 +38,7 @@
                             <path d="M4 7h16M4 12h10M4 17h16"></path>
                         </svg>
                     </span>
-                    <span class="brand__name">CorpAI Media</span>
+                    <span class="brand__name">ELVA SocialAI</span>
                 </a>
             </div>
 
@@ -109,14 +109,23 @@
                     Company Data
                 </a>
 
-                <a href="{{ url_for('create_content') }}"
-                    class="sidebar-link{% if active_page == 'create_content' %} active{% endif %}">
-                    <!-- create/edit icon -->
+               <a href="{{ url_for('create_content') }}"
+                class="sidebar-link{% if active_page == 'create_content' %} active{% endif %}">
+
+                    <span class="icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M5 4h10l4 4v12H5z" />
+                            <path d="M15 4v5h4" />
+                            <path d="M9 13h6" />
+                            <path d="M12 10v6" />
+                        </svg>
+                    </span>
                     Create Content
                 </a>
 
+                <!-- Scheduele Content -->
 
-                <a href="{{ url_for('schedule') }}"
+                 <a href="{{ url_for('schedule') }}"
                    class="sidebar-link{% if active_page == 'schedule' %} active{% endif %}">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <rect x="4" y="5" width="16" height="16" rx="2"></rect>
@@ -124,6 +133,23 @@
                     </svg>
                     Schedule Content
                 </a>
+
+                   <!-- Content Calendar -->
+                  <a
+                href="{{ url_for('content_calendar') }}"
+                class="sidebar-link{% if active_page == 'content_calendar' %} active{% endif %}">
+                <span class="icon icon--calendar" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                        <rect x="4" y="5" width="16" height="15" rx="2" />
+                        <path d="M16 3v4M8 3v4M4 10h16" />
+                        <path d="M8 14h.01M12 14h.01M16 14h.01" />
+                        <path d="M8 17h.01M12 17h.01M16 17h.01" />
+                    </svg>
+                </span>
+
+                Content Calendar
+            </a>
+
             </div>
 
             <div class="sidebar__section">
@@ -206,8 +232,8 @@
             </div>
 
             <footer class="site-footer">
-                <span>CorpAI Media</span>
-                <span>Corporate publishing workspace</span>
+                <span>ELVA SocialAI</span>
+                <span>publishing workspace</span>
             </footer>
 
         </main>
