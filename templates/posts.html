@@ -1,13 +1,21 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Publishing</p>
+        <h1>Published Posts</h1>
+        <p class="lead">Review content that has already been delivered to connected platforms.</p>
+    </div>
+</section>
+
 {% if posts %}
 
 <section class="posts-grid">
 
     {% for post in posts %}
 
-    <div class="post-card">
+    <article class="post-card">
 
         {% if post.image_url %}
         <img
@@ -20,7 +28,8 @@
         <div class="post-card__content">
 
             <div class="post-card__meta">
-                <span>{{ post.platform|capitalize }}</span>
+                <span class="badge badge--{{ post.platform|lower }}">{{ post.platform|capitalize }}</span>
+                <span class="badge badge--published">Published</span>
             </div>
 
             <p class="post-card__caption">
@@ -31,7 +40,7 @@
 
         <hr>
 
-    </div>
+    </article>
 
 
     {% endfor %}
@@ -50,6 +59,8 @@
     <p>
         Monitor your published content here once workflows have begun delivering scheduled posts.
     </p>
+
+    <a class="button button--secondary" href="{{ url_for('schedule') }}">Schedule Content</a>
 </section>
 
 {% endif %}
