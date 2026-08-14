@@ -1,5 +1,5 @@
 from app_configuration.app_config import Config
-from initialize_database.models import (User , Account , CompanyInfo , PlannerHistory , PublishedPost)
+from initialize_database.models import (User , Account , CompanyInfo , PlannerHistory , PublishedPost , ContentJob)
 from app import app, db
 
 def initialize_database():

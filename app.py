@@ -26,6 +26,10 @@ app.config["JWT_COOKIE_CSRF_PROTECT"] = False   # Enable in production
 
 jwt = JWTManager(app)
 
-from agents.user_topic_generator.routes import register_generate_route
+from agents.user_topic_generator.routes import (
+    register_generate_route,
+    register_schedule_route,
+)
 
 register_generate_route(app)
+register_schedule_route(app)

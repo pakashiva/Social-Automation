@@ -511,6 +511,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 scheduleTime.value = defaultTime();
             }
 
+            if (scheduleError) {
+                scheduleError.hidden = true;
+                scheduleError.textContent = '';
+            }
+
             renderCalendar();
             scheduleModal.hidden = false;
             document.body.classList.add('schedule-modal-open');
@@ -521,6 +526,159 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleModal.hidden = true;
             document.body.classList.remove('schedule-modal-open');
             scheduleButton.focus();
+        };
+
+        const scheduleError = document.getElementById('schedule-error');
+        const scheduleSaveLabel = scheduleSave
+            ? scheduleSave.querySelector('.button-label')
+            : null;
+
+        const setScheduleError = (message) => {
+            if (!scheduleError) {
+                return;
+            }
+
+            if (message) {
+                scheduleError.hidden = false;
+                scheduleError.textContent = message;
+            } else {
+                scheduleError.hidden = true;
+                scheduleError.textContent = '';
+            }
+        };
+
+        const showFlashMessage = (category, message) => {
+            const main = document.getElementById('main-content');
+            let container = document.querySelector('.flash-container');
+
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'flash-container';
+
+                const page = document.querySelector('.page');
+                if (main && page) {
+                    main.insertBefore(container, page);
+                } else if (main) {
+                    main.prepend(container);
+                } else {
+                    document.body.prepend(container);
+                }
+            }
+
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${category || 'success'}`;
+            alert.setAttribute('role', 'status');
+
+            const text = document.createElement('span');
+            text.textContent = message;
+            alert.appendChild(text);
+
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.className = 'flash-close';
+            closeButton.setAttribute('aria-label', 'Dismiss message');
+            closeButton.innerHTML = '&times;';
+            closeButton.addEventListener('click', () => alert.remove());
+            alert.appendChild(closeButton);
+
+            container.appendChild(alert);
+        };
+
+        const setSaveLoading = (isLoading) => {
+            if (!scheduleSave) {
+                return;
+            }
+
+            scheduleSave.disabled = isLoading;
+            scheduleSave.classList.toggle('is-loading', isLoading);
+            scheduleSave.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+
+            if (scheduleSaveLabel) {
+                scheduleSaveLabel.textContent = isLoading ? 'Saving...' : 'Save';
+            }
+        };
+
+        const saveSchedule = async () => {
+            setScheduleError('');
+
+            if (!selectedDate) {
+                setScheduleError('Please choose a date.');
+                return;
+            }
+
+            if (!scheduleTime || !scheduleTime.value) {
+                setScheduleError('Please choose a time.');
+                return;
+            }
+
+            const [hours, minutes] = scheduleTime.value.split(':');
+            const scheduledAt = [
+                selectedDate.getFullYear(),
+                '-',
+                pad(selectedDate.getMonth() + 1),
+                '-',
+                pad(selectedDate.getDate()),
+                'T',
+                pad(Number(hours) || 0),
+                ':',
+                pad(Number(minutes) || 0),
+                ':00'
+            ].join('');
+
+            setSaveLoading(true);
+
+            try {
+                const response = await fetch('/schedule_content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        platform: platformSelect ? platformSelect.value : 'linkedin',
+                        scheduled_at: scheduledAt,
+                        status: 'scheduled'
+                    })
+                });
+
+                const contentType = response.headers.get('content-type') || '';
+                let data = {};
+
+                if (contentType.includes('application/json')) {
+                    data = await response.json();
+                }
+
+                if (!response.ok || contentType.includes('text/html')) {
+                    throw new Error(
+                        data.error || 'Unable to save the schedule. Please try again.'
+                    );
+                }
+
+                const flashes = Array.isArray(data.flashes) ? data.flashes : [];
+                if (flashes.length > 0) {
+                    flashes.forEach((item) => {
+                        showFlashMessage(item.category, item.message);
+                    });
+                } else {
+                    showFlashMessage(
+                        'success',
+                        data.message || 'Content scheduled successfully.'
+                    );
+                }
+
+                if (contentStatus) {
+                    contentStatus.textContent = 'Scheduled';
+                }
+
+                closeScheduleModal();
+            } catch (error) {
+                setScheduleError(
+                    error.message || 'Unable to save the schedule. Please try again.'
+                );
+            } finally {
+                setSaveLoading(false);
+            }
         };
 
         scheduleButton.addEventListener('click', openScheduleModal);
@@ -534,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (scheduleSave) {
-            scheduleSave.addEventListener('click', closeScheduleModal);
+            scheduleSave.addEventListener('click', saveSchedule);
         }
 
         scheduleMonthSelect.addEventListener('change', () => {
