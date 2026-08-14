@@ -198,6 +198,11 @@ class ContentJob(db.Model):
         nullable=False
     )
 
+    post_content = db.Column(
+        db.Text,
+        nullable=True
+    )
+
     scheduled_at = db.Column(
         db.DateTime(timezone=True),
         nullable=True
