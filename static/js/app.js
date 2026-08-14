@@ -174,4 +174,220 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderSelectedDates();
     }
+
+    const sourceSelect = document.getElementById('content-source');
+    const platformSelect = document.getElementById('content-platform');
+    const input = document.getElementById('content-input');
+    const sourceHelp = document.getElementById('source-help');
+    const inputHelp = document.getElementById('input-help');
+    const characterCount = document.getElementById('character-count');
+    const generatedContent = document.getElementById('generated-content');
+    const generatedCharacterCount = document.getElementById('generated-character-count');
+    const result = document.getElementById('content-result');
+    const generateButton = document.getElementById('generate-content');
+    const generateError = document.getElementById('generate-error');
+    const generateLabel = generateButton
+        ? generateButton.querySelector('.button-label')
+        : null;
+    const contentStatus = document.getElementById('content-status');
+    const regenerateButton = document.getElementById('regenerate-content');
+
+    if (sourceSelect && input && generateButton) {
+        const updateSourceUI = () => {
+            const source = sourceSelect.value;
+
+            if (source === 'inspiration') {
+                input.placeholder =
+                    'Example: AI agents are changing how companies handle customer support. Create a thought-leadership post around this idea.';
+                sourceHelp.textContent =
+                    'Give the AI an idea, topic, reference, or direction. It will create the post using your company\'s strategy and brand voice.';
+                inputHelp.textContent =
+                    'Your input can be short. Focus on the idea you want the post to communicate.';
+            } else if (source === 'existing_post') {
+                input.placeholder =
+                    'Paste your existing post here. The AI will refine it while preserving the original message.';
+                sourceHelp.textContent =
+                    'Provide a complete existing post and the AI will refine it according to your brand voice and platform.';
+                inputHelp.textContent =
+                    'The original meaning and intent will be preserved while improving clarity, structure, and tone.';
+            } else {
+                input.placeholder =
+                    'Optional: provide a topic, instruction, or specific direction. Leave empty to let the AI decide.';
+                sourceHelp.textContent =
+                    'The AI will generate content using your company information, content strategy, and knowledge base.';
+                inputHelp.textContent =
+                    'This field is optional. You can leave it empty for fully automatic content generation.';
+            }
+
+            updateCharacterCount();
+        };
+
+        const updateCharacterCount = () => {
+            if (characterCount) {
+                characterCount.textContent = `${input.value.length} characters`;
+            }
+        };
+
+        const updateGeneratedCharacterCount = () => {
+            if (generatedCharacterCount && generatedContent) {
+                generatedCharacterCount.textContent =
+                    `${generatedContent.value.length} characters`;
+            }
+        };
+
+        const setGenerateError = (message) => {
+            if (!generateError) {
+                return;
+            }
+
+            if (message) {
+                generateError.hidden = false;
+                generateError.textContent = message;
+            } else {
+                generateError.hidden = true;
+                generateError.textContent = '';
+            }
+        };
+
+        const setLoadingState = (isLoading) => {
+            generateButton.classList.toggle('is-loading', isLoading);
+            generateButton.disabled = isLoading;
+            generateButton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+
+            if (generateLabel) {
+                generateLabel.textContent = isLoading
+                    ? 'Generating...'
+                    : 'Generate Content';
+            }
+
+            if (contentStatus) {
+                contentStatus.textContent = isLoading ? 'Generating' : 'Draft';
+            }
+
+            if (generatedContent) {
+                generatedContent.classList.toggle('is-streaming', isLoading);
+            }
+
+            if (regenerateButton) {
+                regenerateButton.disabled = isLoading;
+            }
+        };
+
+        const streamGeneratedContent = async () => {
+            const contentSource = sourceSelect.value;
+            const userInput = input.value.trim();
+
+            setGenerateError('');
+
+            if (contentSource !== 'generate' && !userInput) {
+                setGenerateError('Please provide input for the selected content source.');
+                return;
+            }
+
+            setLoadingState(true);
+
+            if (result) {
+                result.hidden = false;
+            }
+
+            if (generatedContent) {
+                generatedContent.value = '';
+                updateGeneratedCharacterCount();
+            }
+
+            if (result) {
+                result.scrollIntoView({
+                    behavior: 'auto',
+                    block: 'start'
+                });
+            }
+
+            try {
+                const response = await fetch('/generate_content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/plain'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        content_source: contentSource,
+                        platform: platformSelect ? platformSelect.value : 'linkedin',
+                        user_input: userInput
+                    })
+                });
+
+                const contentType = response.headers.get('content-type') || '';
+
+                if (!response.ok) {
+                    let message = 'Unable to generate content. Please try again.';
+
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json();
+                        message = data.error || message;
+                    } else if (response.status === 401 || response.redirected) {
+                        message = 'Please log in again to generate content.';
+                    }
+
+                    throw new Error(message);
+                }
+
+                if (contentType.includes('text/html')) {
+                    throw new Error('Please log in again to generate content.');
+                }
+
+                if (!response.body || !response.body.getReader) {
+                    const text = await response.text();
+                    generatedContent.value = text;
+                    updateGeneratedCharacterCount();
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+
+                    if (done) {
+                        generatedContent.value += decoder.decode();
+                        updateGeneratedCharacterCount();
+                        break;
+                    }
+
+                    generatedContent.value += decoder.decode(value, { stream: true });
+                    updateGeneratedCharacterCount();
+                    generatedContent.scrollTop = generatedContent.scrollHeight;
+                }
+
+                if (!generatedContent.value.trim()) {
+                    throw new Error('No content was generated. Please try again.');
+                }
+            } catch (error) {
+                setGenerateError(error.message || 'Unable to generate content. Please try again.');
+
+                if (generatedContent && !generatedContent.value.trim()) {
+                    generatedContent.value = '';
+                    updateGeneratedCharacterCount();
+                }
+            } finally {
+                setLoadingState(false);
+            }
+        };
+
+        sourceSelect.addEventListener('change', updateSourceUI);
+        input.addEventListener('input', updateCharacterCount);
+
+        if (generatedContent) {
+            generatedContent.addEventListener('input', updateGeneratedCharacterCount);
+        }
+
+        generateButton.addEventListener('click', streamGeneratedContent);
+
+        if (regenerateButton) {
+            regenerateButton.addEventListener('click', streamGeneratedContent);
+        }
+
+        updateSourceUI();
+    }
 });

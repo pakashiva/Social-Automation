@@ -14,7 +14,7 @@ import json
 import traceback
 mem("json + traceback")
 
-from app import app, db
+from app import app, db, jwt
 mem("app")
 
 from uuid import uuid4
@@ -42,11 +42,17 @@ mem("cron-converter")
 from werkzeug.security import check_password_hash, generate_password_hash
 mem("werkzeug")
 
-from flask import flash, make_response, redirect, render_template, request, url_for
+from flask import (
+    flash,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 mem("flask")
 
 from flask_jwt_extended import (
-    JWTManager,
     create_access_token,
     get_jwt_identity,
     jwt_required,
@@ -78,13 +84,6 @@ load_dotenv()
 
 UPLOAD_FOLDER = Path("uploads")
 UPLOAD_FOLDER.mkdir(exist_ok=True)
-
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
-app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
-app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token"
-app.config["JWT_COOKIE_CSRF_PROTECT"] = False   # Enable in production
-
-jwt = JWTManager(app)
 
 @jwt.expired_token_loader
 def expired_token(jwt_header, jwt_payload):
@@ -166,6 +165,7 @@ def create_content():
         "Create Content — ELVA SocialAI",
         "create_content"
     )
+
 
 @app.route("/content-calendar", methods=["GET"])
 @jwt_required()
@@ -582,5 +582,6 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5000)),
-        debug=False
+        debug=False,
+        threaded=True
     )
