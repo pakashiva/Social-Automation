@@ -107,6 +107,12 @@ def register_schedule_route(app):
 
         platform = (payload.get("platform") or "").strip().lower()
         scheduled_at_raw = (payload.get("scheduled_at") or "").strip()
+        post_content = payload.get("post_content")
+
+        if isinstance(post_content, str):
+            post_content = post_content.strip() or None
+        else:
+            post_content = None
 
         if platform not in VALID_PLATFORMS:
             return jsonify({
@@ -145,6 +151,7 @@ def register_schedule_route(app):
         job = ContentJob(
             user_id=user_id,
             platform=platform,
+            post_content=post_content,
             scheduled_at=scheduled_at,
             status="scheduled",
             updated_at=datetime.now(UTC),
