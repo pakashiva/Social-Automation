@@ -638,7 +638,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         platform: platformSelect ? platformSelect.value : 'linkedin',
                         scheduled_at: scheduledAt,
-                        status: 'scheduled'
+                        status: 'scheduled',
+                        post_content: generatedContent ? generatedContent.value : ''
                     })
                 });
 
