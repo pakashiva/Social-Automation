@@ -27,23 +27,26 @@ def _extract_chunk_text(chunk):
 
     if content is None:
         text = getattr(chunk, "text", None)
-        return text or ""
+        return text if isinstance(text, str) else ""
 
     if isinstance(content, str):
         return content
+
+    if isinstance(content, dict) and content.get("type") == "text":
+        return content.get("text") or ""
 
     if isinstance(content, list):
         parts = []
 
         for block in content:
             if isinstance(block, dict) and block.get("type") == "text":
-                parts.append(block.get("text", ""))
+                parts.append(block.get("text") or "")
             elif isinstance(block, str):
                 parts.append(block)
 
         return "".join(parts)
 
-    return str(content)
+    return ""
 
 
 def _build_human_message(user_input, content_source, brand_context):
