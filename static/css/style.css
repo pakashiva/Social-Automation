@@ -761,3 +761,46 @@ body.is-auth .flash-container {
 
     cursor: pointer;
 }
+
+/* =========================================================
+   Generate button loading spinner
+   ========================================================= */
+
+.button-spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: button-spin 0.7s linear infinite;
+}
+
+.button.is-loading .button-spinner {
+    display: inline-block;
+}
+
+.button.is-loading .button-label {
+    opacity: 0.92;
+}
+
+.button.button--secondary.is-loading .button-spinner {
+    border-color: rgba(22, 41, 74, 0.2);
+    border-top-color: var(--color-primary);
+}
+
+@keyframes button-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.form-actions .field-error {
+    flex-basis: 100%;
+    margin: 0;
+}
+
+#generated-content.is-streaming {
+    caret-color: var(--color-primary);
+}
