@@ -174,3 +174,44 @@ class PlannerHistory(db.Model):
         db.DateTime,
         default=datetime.now(UTC)
     )
+
+
+# =======================================================================
+# Custom Schedular
+# =======================================================================
+class ContentJob(db.Model):
+    __tablename__ = "content_jobs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    user_id = db.Column(
+        db.String(36),
+        db.ForeignKey("users.user_id"),
+        nullable=False
+    )
+
+    platform = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    scheduled_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
+    )
+
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False
+    )
+
+    status = db.Column(
+        db.String(30),
+        default="draft",
+        nullable=False
+    )
