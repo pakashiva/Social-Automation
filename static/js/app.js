@@ -270,6 +270,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (regenerateButton) {
                 regenerateButton.disabled = isLoading;
+                regenerateButton.classList.toggle('is-loading', isLoading);
+                regenerateButton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+
+                const regenerateLabel = regenerateButton.querySelector('.button-label');
+                if (regenerateLabel) {
+                    regenerateLabel.textContent = isLoading
+                        ? 'Regenerating...'
+                        : 'Regenerate';
+                }
             }
         };
 
@@ -389,5 +398,192 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         updateSourceUI();
+    }
+
+    const scheduleButton = document.getElementById('schedule-content');
+    const scheduleModal = document.getElementById('schedule-modal');
+    const scheduleBackdrop = document.getElementById('schedule-modal-backdrop');
+    const scheduleClose = document.getElementById('schedule-modal-close');
+    const scheduleSave = document.getElementById('schedule-save');
+    const scheduleCalendar = document.getElementById('schedule-calendar');
+    const scheduleMonthSelect = document.getElementById('schedule-month');
+    const scheduleYearSelect = document.getElementById('schedule-year');
+    const schedulePrevMonth = document.getElementById('schedule-prev-month');
+    const scheduleNextMonth = document.getElementById('schedule-next-month');
+    const scheduleTime = document.getElementById('schedule-time');
+
+    if (scheduleButton && scheduleModal && scheduleCalendar) {
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+
+        const today = new Date();
+        let viewYear = today.getFullYear();
+        let viewMonth = today.getMonth();
+        let selectedDate = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate()
+        );
+
+        const pad = (value) => String(value).padStart(2, '0');
+
+        const defaultTime = () => {
+            const nextHour = new Date();
+            nextHour.setMinutes(0, 0, 0);
+            nextHour.setHours(nextHour.getHours() + 1);
+            return `${pad(nextHour.getHours())}:${pad(nextHour.getMinutes())}`;
+        };
+
+        const fillPeriodSelects = () => {
+            scheduleMonthSelect.innerHTML = '';
+            monthNames.forEach((name, index) => {
+                const option = document.createElement('option');
+                option.value = String(index);
+                option.textContent = name;
+                scheduleMonthSelect.appendChild(option);
+            });
+
+            const startYear = today.getFullYear();
+            scheduleYearSelect.innerHTML = '';
+            for (let year = startYear; year <= startYear + 5; year += 1) {
+                const option = document.createElement('option');
+                option.value = String(year);
+                option.textContent = String(year);
+                scheduleYearSelect.appendChild(option);
+            }
+        };
+
+        const isSameDay = (left, right) => (
+            left.getFullYear() === right.getFullYear()
+            && left.getMonth() === right.getMonth()
+            && left.getDate() === right.getDate()
+        );
+
+        const renderCalendar = () => {
+            scheduleMonthSelect.value = String(viewMonth);
+            scheduleYearSelect.value = String(viewYear);
+            scheduleCalendar.innerHTML = '';
+
+            const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
+            const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+            for (let i = 0; i < firstWeekday; i += 1) {
+                const empty = document.createElement('span');
+                empty.className = 'schedule-picker__day schedule-picker__day--empty';
+                empty.setAttribute('aria-hidden', 'true');
+                scheduleCalendar.appendChild(empty);
+            }
+
+            for (let day = 1; day <= daysInMonth; day += 1) {
+                const dayDate = new Date(viewYear, viewMonth, day);
+                const dayButton = document.createElement('button');
+                dayButton.type = 'button';
+                dayButton.className = 'schedule-picker__day';
+                dayButton.textContent = String(day);
+                dayButton.dataset.date = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`;
+
+                if (isSameDay(dayDate, today)) {
+                    dayButton.classList.add('is-today');
+                }
+
+                if (isSameDay(dayDate, selectedDate)) {
+                    dayButton.classList.add('is-selected');
+                    dayButton.setAttribute('aria-current', 'date');
+                }
+
+                dayButton.addEventListener('click', () => {
+                    selectedDate = dayDate;
+                    renderCalendar();
+                });
+
+                scheduleCalendar.appendChild(dayButton);
+            }
+        };
+
+        const openScheduleModal = () => {
+            fillPeriodSelects();
+            viewYear = selectedDate.getFullYear();
+            viewMonth = selectedDate.getMonth();
+
+            if (!scheduleTime.value) {
+                scheduleTime.value = defaultTime();
+            }
+
+            renderCalendar();
+            scheduleModal.hidden = false;
+            document.body.classList.add('schedule-modal-open');
+            scheduleMonthSelect.focus();
+        };
+
+        const closeScheduleModal = () => {
+            scheduleModal.hidden = true;
+            document.body.classList.remove('schedule-modal-open');
+            scheduleButton.focus();
+        };
+
+        scheduleButton.addEventListener('click', openScheduleModal);
+
+        if (scheduleBackdrop) {
+            scheduleBackdrop.addEventListener('click', closeScheduleModal);
+        }
+
+        if (scheduleClose) {
+            scheduleClose.addEventListener('click', closeScheduleModal);
+        }
+
+        if (scheduleSave) {
+            scheduleSave.addEventListener('click', closeScheduleModal);
+        }
+
+        scheduleMonthSelect.addEventListener('change', () => {
+            viewMonth = Number(scheduleMonthSelect.value);
+            renderCalendar();
+        });
+
+        scheduleYearSelect.addEventListener('change', () => {
+            viewYear = Number(scheduleYearSelect.value);
+            renderCalendar();
+        });
+
+        schedulePrevMonth.addEventListener('click', () => {
+            const minYear = today.getFullYear();
+            viewMonth -= 1;
+            if (viewMonth < 0) {
+                if (viewYear > minYear) {
+                    viewMonth = 11;
+                    viewYear -= 1;
+                } else {
+                    viewMonth = 0;
+                }
+            }
+            renderCalendar();
+        });
+
+        scheduleNextMonth.addEventListener('click', () => {
+            const maxYear = today.getFullYear() + 5;
+            viewMonth += 1;
+            if (viewMonth > 11) {
+                if (viewYear < maxYear) {
+                    viewMonth = 0;
+                    viewYear += 1;
+                } else {
+                    viewMonth = 11;
+                }
+            }
+            renderCalendar();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !scheduleModal.hidden) {
+                closeScheduleModal();
+            }
+        });
+
+        fillPeriodSelects();
+        if (!scheduleTime.value) {
+            scheduleTime.value = defaultTime();
+        }
     }
 });

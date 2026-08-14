@@ -208,7 +208,8 @@
                 class="button button--secondary"
                 id="regenerate-content">
 
-                Regenerate
+                <span class="button-spinner" aria-hidden="true"></span>
+                <span class="button-label">Regenerate</span>
 
             </button>
 
@@ -218,7 +219,9 @@
                 <button
                     type="button"
                     class="button button--secondary"
-                    id="schedule-content">
+                    id="schedule-content"
+                    aria-haspopup="dialog"
+                    aria-controls="schedule-modal">
 
                     Schedule for Later
 
@@ -238,6 +241,111 @@
         </div>
 
     </section>
+
+</div>
+
+
+<div
+    class="schedule-modal"
+    id="schedule-modal"
+    hidden>
+
+    <div
+        class="schedule-modal__backdrop"
+        id="schedule-modal-backdrop"></div>
+
+    <div
+        class="schedule-modal__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="schedule-modal-title">
+
+        <div class="schedule-modal__header">
+
+            <h2 id="schedule-modal-title">Schedule for Later</h2>
+
+            <button
+                type="button"
+                class="schedule-modal__close"
+                id="schedule-modal-close"
+                aria-label="Close schedule picker">
+                &times;
+            </button>
+
+        </div>
+
+        <div class="schedule-modal__body">
+
+            <div class="schedule-picker__nav">
+
+                <button
+                    type="button"
+                    class="schedule-picker__nav-btn"
+                    id="schedule-prev-month"
+                    aria-label="Previous month">
+                    ‹
+                </button>
+
+                <div class="schedule-picker__period">
+
+                    <label class="visually-hidden" for="schedule-month">Month</label>
+                    <select id="schedule-month"></select>
+
+                    <label class="visually-hidden" for="schedule-year">Year</label>
+                    <select id="schedule-year"></select>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="schedule-picker__nav-btn"
+                    id="schedule-next-month"
+                    aria-label="Next month">
+                    ›
+                </button>
+
+            </div>
+
+            <div class="schedule-picker__weekdays" aria-hidden="true">
+                <span>Sun</span>
+                <span>Mon</span>
+                <span>Tue</span>
+                <span>Wed</span>
+                <span>Thu</span>
+                <span>Fri</span>
+                <span>Sat</span>
+            </div>
+
+            <div
+                class="schedule-picker__grid"
+                id="schedule-calendar"
+                role="grid"
+                aria-label="Choose a date"></div>
+
+            <label class="field-group schedule-picker__time">
+                <span>Time</span>
+                <input
+                    id="schedule-time"
+                    type="time"
+                    value="09:00">
+            </label>
+
+        </div>
+
+        <div class="schedule-modal__actions">
+
+            <button
+                type="button"
+                class="button button--primary"
+                id="schedule-save">
+
+                Save
+
+            </button>
+
+        </div>
+
+    </div>
 
 </div>
 
