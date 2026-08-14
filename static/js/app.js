@@ -548,22 +548,16 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showFlashMessage = (category, message) => {
-            const main = document.getElementById('main-content');
-            let container = document.querySelector('.flash-container');
+            let container = document.getElementById('flash-container');
 
             if (!container) {
                 container = document.createElement('div');
+                container.id = 'flash-container';
                 container.className = 'flash-container';
-
-                const page = document.querySelector('.page');
-                if (main && page) {
-                    main.insertBefore(container, page);
-                } else if (main) {
-                    main.prepend(container);
-                } else {
-                    document.body.prepend(container);
-                }
+                document.body.appendChild(container);
             }
+
+            container.classList.add('is-toast');
 
             const alert = document.createElement('div');
             alert.className = `alert alert-${category || 'success'}`;
@@ -578,10 +572,16 @@ document.addEventListener('DOMContentLoaded', () => {
             closeButton.className = 'flash-close';
             closeButton.setAttribute('aria-label', 'Dismiss message');
             closeButton.innerHTML = '&times;';
-            closeButton.addEventListener('click', () => alert.remove());
+            closeButton.addEventListener('click', () => {
+                alert.remove();
+                if (!container.children.length) {
+                    container.classList.remove('is-toast');
+                }
+            });
             alert.appendChild(closeButton);
 
             container.appendChild(alert);
+            alert.focus?.();
         };
 
         const setSaveLoading = (isLoading) => {
@@ -655,6 +655,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     );
                 }
 
+                if (contentStatus) {
+                    contentStatus.textContent = 'Scheduled';
+                }
+
+                closeScheduleModal();
+
                 const flashes = Array.isArray(data.flashes) ? data.flashes : [];
                 if (flashes.length > 0) {
                     flashes.forEach((item) => {
@@ -666,12 +672,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         data.message || 'Content scheduled successfully.'
                     );
                 }
-
-                if (contentStatus) {
-                    contentStatus.textContent = 'Scheduled';
-                }
-
-                closeScheduleModal();
             } catch (error) {
                 setScheduleError(
                     error.message || 'Unable to save the schedule. Please try again.'

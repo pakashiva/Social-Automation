@@ -439,9 +439,29 @@ body.is-auth .sidebar-backdrop {
     width: 100%;
     max-width: var(--content-max);
     margin: 0 auto;
-    padding: var(--space-6) var(--space-7) 0;
+    padding: 0;
     display: grid;
     gap: var(--space-3);
+}
+
+.flash-container:not(:empty) {
+    padding: var(--space-6) var(--space-7) 0;
+}
+
+.flash-container.is-toast {
+    position: fixed;
+    top: calc(var(--nav-height) + var(--space-4));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 120;
+    width: min(560px, calc(100% - 32px));
+    max-width: min(560px, calc(100% - 32px));
+    padding: 0;
+    margin: 0;
+}
+
+.flash-container.is-toast .alert {
+    box-shadow: var(--shadow-md);
 }
 
 body.is-auth .flash-container {
