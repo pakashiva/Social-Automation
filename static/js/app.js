@@ -319,17 +319,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const contentType = response.headers.get('content-type') || '';
 
-                if (!response.ok || contentType.includes('text/html')) {
+                if (!response.ok) {
                     let message = 'Unable to generate content. Please try again.';
 
                     if (contentType.includes('application/json')) {
                         const data = await response.json();
                         message = data.error || message;
-                    } else if (contentType.includes('text/html')) {
+                    } else if (response.status === 401 || response.redirected) {
                         message = 'Please log in again to generate content.';
                     }
 
                     throw new Error(message);
+                }
+
+                if (contentType.includes('text/html')) {
+                    throw new Error('Please log in again to generate content.');
                 }
 
                 if (!response.body || !response.body.getReader) {
