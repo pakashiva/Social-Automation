@@ -222,8 +222,8 @@ select:focus-visible {
 
 .form-card {
     display: grid;
-    gap: var(--space-7);
-    padding: var(--space-7);
+    gap: 14px;
+    padding: 24px;
 }
 
 .form-section {
@@ -719,4 +719,96 @@ select:focus-visible {
         width: 100%;
     }
 
+}
+
+/* =========================================================
+   Compact authentication pages
+   Keeps Login / Sign Up inside the desktop viewport.
+   ========================================================= */
+
+body.is-auth {
+    overflow: hidden;
+}
+
+body.is-auth .page {
+    max-width: 560px;
+    height: calc(100vh - var(--nav-height));
+    padding: 24px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.is-auth .auth-page,
+body.is-auth .auth-container {
+    width: 100%;
+}
+
+body.is-auth .form-card {
+    width: 100%;
+    max-width: 560px;
+    gap: 14px;
+    padding: 24px;
+}
+
+body.is-auth .auth-title {
+    margin-bottom: 0;
+}
+
+body.is-auth .auth-title .eyebrow {
+    margin-bottom: 4px;
+    font-size: 0.68rem;
+}
+
+body.is-auth .auth-title h1 {
+    font-size: 1.65rem;
+}
+
+body.is-auth .auth-subtitle {
+    margin-bottom: 4px;
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+
+body.is-auth .field-group {
+    gap: 3px;
+}
+
+body.is-auth .field-group label {
+    font-size: 0.72rem;
+}
+
+body.is-auth .field-help {
+    font-size: 0.68rem;
+    line-height: 1.25;
+}
+
+body.is-auth .field-group input {
+    min-height: 40px;
+    padding: 7px 11px;
+}
+
+body.is-auth .form-actions .button {
+    min-height: 40px;
+}
+
+body.is-auth .auth-footer {
+    font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+    body.is-auth {
+        overflow: auto;
+    }
+
+    body.is-auth .page {
+        height: auto;
+        min-height: calc(100vh - var(--nav-height));
+        padding: 16px 12px;
+        align-items: flex-start;
+    }
+
+    body.is-auth .form-card {
+        padding: 18px;
+    }
 }

@@ -1182,3 +1182,11 @@ body.schedule-modal-open {
     }
 
 }
+
+/* Compact Login / Sign Up viewport */
+body.is-auth .page {
+    max-width: 560px;
+    height: calc(100vh - var(--nav-height));
+    padding-top: 24px;
+    padding-bottom: 24px;
+}
