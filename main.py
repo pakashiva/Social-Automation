@@ -30,7 +30,7 @@ mem("dotenv")
 from flask_sqlalchemy import SQLAlchemy
 mem("flask-sqlalchemy")
 
-from initialize_database.models import Account, PublishedPost, User, CompanyInfo
+from initialize_database.models import Account, PublishedPost, User, CompanyInfo , ContentJob , RecurringContent
 mem("models")
 
 from datetime import UTC, datetime, timedelta
@@ -49,6 +49,7 @@ from flask import (
     render_template,
     request,
     url_for,
+    jsonify
 )
 mem("flask")
 
@@ -527,7 +528,6 @@ def save_company_info():
         flash(str(e) , "error")
         return redirect(url_for("company"))
 
-    
 
     try:
 
@@ -577,8 +577,63 @@ def logout():
     flash("You have been logged out successfully.", "success")
     return response
 
+@app.route("/api/content-calendar", methods=["GET"])
+@jwt_required()
+def get_content_calendar():
+
+    user_id = get_jwt_identity()
+
+    recurring_posts = RecurringContent.query.filter(
+            RecurringContent.user_id == user_id,
+            RecurringContent.status == "scheduled"
+        ).all()
+
+    custom_posts = ContentJob.query.filter(
+            ContentJob.user_id == user_id,
+            ContentJob.status == "scheduled"
+        ).all()
+
+    events = []
+
+        # Recurring posts
+    for post in recurring_posts:
+        events.append({
+                "id": f"recurring-{post.id}",
+                "title": post.post_content[:50],
+                "start": post.scheduled_at.isoformat(),
+                "extendedProps": {
+                    "status": post.status,
+                    "platform": post.platform,
+                    "post_content": post.post_content
+                }
+            })
+
+        # Custom posts
+    for post in custom_posts:
+            events.append({
+                "id": f"custom-{post.id}",
+                "title": post.post_content[:50],
+                "start": post.scheduled_at.isoformat(),
+                "extendedProps": {
+                    "status": post.status,
+                    "platform": post.platform,
+                    "post_content": post.post_content
+                }
+            })
+
+        # Earliest scheduled content first
+    events.sort(
+            key=lambda event: event["start"]
+        )
+
+    return jsonify(events)
+
 
 if __name__ == "__main__":
+
+    from scheduler import start_scheduler
+
+    start_scheduler()
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5000)),

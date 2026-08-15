@@ -1,28 +1,16 @@
 from app import db , app
 import requests
 from initialize_database.models import PublishedPost , Account
-
 from app import app, db
 
 
-def get_user_info():
+def publish_to_facebook(message , user_id):
+
     with app.app_context():
-        last_account = Account.query.order_by(Account.id.desc()).first()
+        account = Account.query.filter(user_id=user_id).first()
 
-        if last_account:
-            PAGE_ID = last_account.page_id
-            PAGE_ACCESS_TOKEN = last_account.page_access_token
-        else:
-            PAGE_ID = None
-            PAGE_ACCESS_TOKEN = None
-
-    return last_account , PAGE_ACCESS_TOKEN , PAGE_ID
-
-
-def publish_to_facebook(message):
-
-    account, PAGE_ACCESS_TOKEN , PAGE_ID = get_user_info()
-    user_id = account.user_id
+    PAGE_ACCESS_TOKEN = account.page_access_token
+    PAGE_ID = account.page_id
 
     if not account:
         raise ValueError("No Facebook account found")

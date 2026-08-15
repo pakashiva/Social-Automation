@@ -746,3 +746,120 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+// ============================================================
+// CONTENT CALENDAR
+// ============================================================
+
+async function loadContentCalendar() {
+
+    const calendarElement =
+        document.getElementById("content-calendar");
+
+    if (!calendarElement) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/content-calendar",
+            {
+                method: "GET",
+                credentials: "same-origin",
+                headers: {
+                    "Accept": "application/json"
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                "Unable to load scheduled content."
+            );
+        }
+
+        const events = await response.json();
+
+        const calendar =
+            new FullCalendar.Calendar(
+                calendarElement,
+                {
+
+                    initialView: "dayGridMonth",
+
+                    headerToolbar: {
+                        left: "prev,next today",
+                        center: "title",
+                        right:
+                            "dayGridMonth,timeGridWeek,timeGridDay"
+                    },
+
+                    height: "auto",
+
+                    displayEventTime: true,
+
+                    events: events,
+
+                    eventClick: function (info) {
+
+                        const event =
+                            info.event;
+
+                        const platform =
+                            event.extendedProps.platform;
+
+                        const status =
+                            event.extendedProps.status;
+
+                        const postContent =
+                            event.extendedProps.post_content;
+
+                        alert(
+                            "Date: " +
+                            event.start.toLocaleDateString() +
+
+                            "\n\nTime: " +
+                            event.start.toLocaleTimeString(
+                                [],
+                                {
+                                    hour: "2-digit",
+                                    minute: "2-digit"
+                                }
+                            ) +
+
+                            "\n\nPlatform: " +
+                            platform +
+
+                            "\n\nStatus: " +
+                            status +
+
+                            "\n\nContent:\n" +
+                            postContent
+                        );
+                    }
+                }
+            );
+
+        calendar.render();
+
+    } catch (error) {
+
+        console.error(
+            "Content calendar error:",
+            error
+        );
+
+        calendarElement.innerHTML =
+            "<p>Unable to load scheduled content.</p>";
+    }
+}
+
+
+// ============================================================
+// INITIALIZE CONTENT CALENDAR
+// ============================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    loadContentCalendar
+);

@@ -1,89 +1,56 @@
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from zoneinfo import ZoneInfo
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from croniter import croniter
 
 from app import app, db
-from initialize_database.models import CompanyInfo
+
+from initialize_database.models import (
+    CompanyInfo,
+    ContentJob,
+    RecurringContent,
+)
 
 from agents.topic_evaluator.eval_functions import generate_topic
 from rag_system.rag_functions import retrieve_semantic_chunks
 from agents.content_writer_agent.content_functions import generate_linkedin_content
+
 from publisher.facebook_functions import publish_to_facebook
 
-import traceback
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+# Number of future recurring posts we always want ready.
+K = 2
+
+# How often APScheduler checks for work.
+CHECK_INTERVAL_SECONDS = 60
 
 
 # ============================================================
-# EXECUTE COMPLETE CONTENT PIPELINE
+# 1. GENERATE CONTENT
 # ============================================================
 
-def execute_scheduled_content(user_id):
+def generate_content(user_id):
     """
-    Execute the complete content generation and publishing
-    pipeline for one user.
+    Generate one recurring post for a user.
 
-    IMPORTANT:
-    Any exception is allowed to propagate to the scheduler.
-    This ensures failed executions are NOT marked as successful.
+    This function ONLY generates content.
+    It does not save to the database.
+    It does not publish anything.
     """
 
-    print()
-    print("=" * 70)
-    print(f"STARTING CONTENT PIPELINE FOR USER: {user_id}")
-    print("=" * 70)
-
-    # --------------------------------------------------------
-    # STEP 1: Generate topic
-    # --------------------------------------------------------
-
-    print()
-    print("[1/4] Calling generate_topic()...")
-
-    output = generate_topic(user_id=user_id)
-
-    if output is None:
-        raise ValueError("generate_topic() returned None")
-
-    print("[1/4] generate_topic() completed successfully")
-
-    print("Pillar:", output.pillar)
-    print("Topic:", output.topic)
-    print("Post format:", output.post_format)
-    print("Brand voice:", output.brand_voice)
-
-    # --------------------------------------------------------
-    # STEP 2: Retrieve semantic chunks
-    # --------------------------------------------------------
-
-    print()
-    print("[2/4] Calling retrieve_semantic_chunks()...")
+    output = generate_topic(
+        user_id=user_id
+    )
 
     data = retrieve_semantic_chunks(
         pillar=output.pillar,
         user_id=user_id
     )
-
-    if data is None:
-        raise ValueError(
-            "retrieve_semantic_chunks() returned None"
-        )
-
-    print("[2/4] retrieve_semantic_chunks() completed successfully")
-
-    print("Retrieved data length:", len(data))
-    print("Retrieved data preview:")
-    print(data[:200])
-
-    # --------------------------------------------------------
-    # STEP 3: Generate LinkedIn content
-    # --------------------------------------------------------
-
-    print()
-    print("[3/4] Calling generate_linkedin_content()...")
-    print("WARNING: If execution stops after this message,")
-    print("the problem is most likely inside llm.invoke().")
-    print()
 
     post = generate_linkedin_content(
         pillar=output.pillar,
@@ -93,516 +60,404 @@ def execute_scheduled_content(user_id):
         pillar_guidlines=data
     )
 
-    if post is None:
-        raise ValueError(
-            "generate_linkedin_content() returned None"
-        )
+    # Some LLM libraries return an AIMessage.
+    # Others may already return a string.
+    if hasattr(post, "content"):
+        return post.content
 
-    print()
-    print("[3/4] generate_linkedin_content() completed successfully")
-
-    print("Generated content type:", type(post))
-
-    # --------------------------------------------------------
-    # Handle LangChain AIMessage
-    # --------------------------------------------------------
-    content = str(post)
-
-    print("Generated content preview:")
-    print(str(content)[:300])
-
-    # --------------------------------------------------------
-    # STEP 4: Publish to Facebook
-    # --------------------------------------------------------
-
-    print()
-    print("[4/4] Calling publish_to_facebook()...")
-
-    publish_result = publish_to_facebook(message=content)
-
-    print()
-    print("[4/4] publish_to_facebook() completed successfully")
-
-    print("Facebook result:")
-    print(publish_result)
-
-    # --------------------------------------------------------
-    # PIPELINE COMPLETE
-    # --------------------------------------------------------
-
-    print()
-    print("=" * 70)
-    print(f"CONTENT PIPELINE SUCCESSFUL FOR USER: {user_id}")
-    print("=" * 70)
-    print()
-
-    return publish_result
+    return str(post)
 
 
 # ============================================================
-# GET SCHEDULED OCCURRENCES
+# 2. GET NEXT RECURRING DATETIME
 # ============================================================
 
-def get_scheduled_occurrences(
-    cron_expression,
-    timezone_name,
-    now_utc,
-    last_execution_utc=None
-):
+def get_next_schedule(company, after_utc=None):
     """
-    Return scheduled occurrences that have happened since the
-    last execution.
+    Calculate the next occurrence of the Company's cron schedule.
 
-    For the first execution, only the latest occurrence is returned.
+    CompanyInfo.scheduled_time:
+        0 14 * * MON,WED,FRI
+
+    CompanyInfo.timezone:
+        Asia/Kolkata
+
+    Returns the scheduled datetime in UTC.
     """
 
-    user_timezone = ZoneInfo(timezone_name)
+    user_timezone = ZoneInfo(company.timezone)
 
-    now_local = now_utc.astimezone(user_timezone)
+    if after_utc is None:
+        after_utc = datetime.now(UTC)
 
-    print()
-    print("Calculating scheduled occurrences...")
-    print("Cron expression:", cron_expression)
-    print("Timezone:", timezone_name)
-    print("Current local time:", now_local)
-    print("Last execution UTC:", last_execution_utc)
-
-    # --------------------------------------------------------
-    # If this company has executed before
-    # --------------------------------------------------------
-
-    if last_execution_utc:
-
-        last_execution_local = (
-            last_execution_utc
-            .replace(tzinfo=timezone.utc)
-            .astimezone(user_timezone)
-        )
-
-        print(
-            "Last execution local time:",
-            last_execution_local
-        )
-
-        cron = croniter(
-            cron_expression,
-            last_execution_local
-        )
-
-        occurrences = []
-
-        while True:
-
-            occurrence = cron.get_next(datetime)
-
-            if occurrence > now_local:
-                break
-
-            occurrences.append(occurrence)
-
-        print(
-            f"Found {len(occurrences)} occurrence(s)"
-        )
-
-        return occurrences
-
-    # --------------------------------------------------------
-    # First-ever execution
-    # --------------------------------------------------------
-
-    print(
-        "No previous execution found."
-    )
+    # Convert UTC -> user's timezone because the cron expression
+    # represents the user's local schedule.
+    local_time = after_utc.astimezone(user_timezone)
 
     cron = croniter(
-        cron_expression,
-        now_local
+        company.scheduled_time,
+        local_time
     )
 
-    occurrence = cron.get_prev(datetime)
+    next_local = cron.get_next(datetime)
 
-    print(
-        "Latest scheduled occurrence:",
-        occurrence
-    )
+    # Store actual post times in UTC.
+    next_utc = next_local.astimezone(UTC)
 
-    return [occurrence]
+    return next_utc
 
 
 # ============================================================
-# PROCESS ONE COMPANY
+# 3. CREATE ONE RECURRING POST
 # ============================================================
 
-def process_company_schedule(
-    company,
-    now_utc
-):
+def create_recurring_post(company, scheduled_at):
     """
-    Find and execute all scheduled occurrences for one company.
+    Generate one post and save it into RecurringContent.
+
+    This does NOT publish the post.
     """
 
-    print()
-    print("-" * 70)
     print(
-        f"PROCESSING COMPANY / USER: {company.user_id}"
+        f"Generating recurring content for user "
+        f"{company.user_id}"
     )
-    print("-" * 70)
+
+    content = generate_content(
+        user_id=company.user_id
+    )
+
+    recurring_post = RecurringContent(
+        user_id=company.user_id,
+        platform="facebook",
+        scheduled_at=scheduled_at,
+        post_content=content,
+        status="scheduled"
+    )
+
+    db.session.add(recurring_post)
+    db.session.commit()
+
+    print(
+        f"Recurring content created for "
+        f"{scheduled_at}"
+    )
+
+    return recurring_post
+
+
+# ============================================================
+# 4. MAINTAIN NEXT K RECURRING POSTS
+# ============================================================
+
+def maintain_recurring_posts(company):
+    """
+    Make sure this company always has K future recurring posts.
+
+    Example:
+
+        K = 2
+
+        Existing:
+            Monday
+            Wednesday
+
+        Nothing happens.
+
+        After Monday is published:
+
+        Existing future:
+            Wednesday
+
+        Only 1 exists.
+
+        This function generates:
+            Friday
+
+        Future posts are again:
+            Wednesday
+            Friday
+    """
+
+    now_utc = datetime.now(UTC)
 
     # --------------------------------------------------------
-    # No schedule configured
+    # Find existing future recurring posts
     # --------------------------------------------------------
 
-    if not company.scheduled_time:
-
-        print(
-            f"No scheduled time for user {company.user_id}"
+    future_posts = (
+        RecurringContent.query
+        .filter(
+            RecurringContent.user_id == company.user_id,
+            RecurringContent.status == "scheduled",
+            RecurringContent.scheduled_at > now_utc
         )
+        .order_by(
+            RecurringContent.scheduled_at.asc()
+        )
+        .all()
+    )
 
+    missing_posts = K - len(future_posts)
+
+    if missing_posts <= 0:
         return
 
     print(
-        "Scheduled time / cron:",
-        company.scheduled_time
-    )
-
-    print(
-        "Timezone:",
-        company.timezone
-    )
-
-    print(
-        "Last scheduled run:",
-        company.last_scheduled_run_at
+        f"User {company.user_id} needs "
+        f"{missing_posts} recurring post(s)"
     )
 
     # --------------------------------------------------------
-    # Find occurrences
+    # Determine where cron calculation should start
     # --------------------------------------------------------
 
-    occurrences = get_scheduled_occurrences(
-        cron_expression=company.scheduled_time,
-        timezone_name=company.timezone,
-        now_utc=now_utc,
-        last_execution_utc=company.last_scheduled_run_at
-    )
+    if future_posts:
+        after_utc = future_posts[-1].scheduled_at
 
-    if not occurrences:
+        # SQLite/Postgres behaviour can sometimes return
+        # a naive datetime depending on configuration.
+        if after_utc.tzinfo is None:
+            after_utc = after_utc.replace(
+                tzinfo=UTC
+            )
 
-        print(
-            f"No pending occurrences for "
-            f"user {company.user_id}"
-        )
-
-        return
-
-    print(
-        f"Pending occurrences: {len(occurrences)}"
-    )
+    else:
+        after_utc = now_utc
 
     # --------------------------------------------------------
-    # Execute each occurrence
+    # Generate missing posts
     # --------------------------------------------------------
 
-    for occurrence_local in occurrences:
+    for _ in range(missing_posts):
 
-        print()
-        print("=" * 70)
-        print(
-            f"PROCESSING OCCURRENCE FOR USER "
-            f"{company.user_id}"
-        )
-        print("=" * 70)
-
-        # ----------------------------------------------------
-        # Convert scheduled local time to UTC
-        # ----------------------------------------------------
-
-        occurrence_utc = occurrence_local.astimezone(
-            timezone.utc
+        scheduled_at = get_next_schedule(
+            company=company,
+            after_utc=after_utc
         )
 
-        # SQLAlchemy DateTime column is timezone-naive
-        occurrence_utc_naive = (
-            occurrence_utc.replace(tzinfo=None)
+        create_recurring_post(
+            company=company,
+            scheduled_at=scheduled_at
         )
 
-        print(
-            "Scheduled occurrence local:",
-            occurrence_local
-        )
-
-        print(
-            "Scheduled occurrence UTC:",
-            occurrence_utc
-        )
-
-        print(
-            "Scheduled occurrence naive UTC:",
-            occurrence_utc_naive
-        )
-
-        # ----------------------------------------------------
-        # Prevent duplicate execution
-        # ----------------------------------------------------
-
-        if (
-            company.last_scheduled_run_at
-            and occurrence_utc_naive
-            <= company.last_scheduled_run_at
-        ):
-
-            print(
-                "Occurrence already executed."
-            )
-
-            print(
-                "Skipping..."
-            )
-
-            continue
-
-        print()
-        print(
-            f"Executing user {company.user_id}"
-        )
-
-        # ----------------------------------------------------
-        # Execute COMPLETE pipeline
-        # ----------------------------------------------------
-
-        try:
-
-            print()
-            print(
-                ">>> BEGINNING execute_scheduled_content()"
-            )
-
-            result = execute_scheduled_content(
-                company.user_id
-            )
-
-            print()
-            print(
-                ">>> execute_scheduled_content() RETURNED"
-            )
-
-            print(
-                "Result:",
-                result
-            )
-
-            # ------------------------------------------------
-            # ONLY mark as executed AFTER success
-            # ------------------------------------------------
-
-            company.last_scheduled_run_at = (
-                occurrence_utc_naive
-            )
-
-            db.session.commit()
-
-            print()
-            print("=" * 70)
-            print(
-                f"SUCCESSFULLY EXECUTED USER "
-                f"{company.user_id}"
-            )
-            print(
-                "last_scheduled_run_at updated to:",
-                occurrence_utc_naive
-            )
-            print("=" * 70)
-
-        except Exception as e:
-
-            # ------------------------------------------------
-            # Rollback database changes
-            # ------------------------------------------------
-
-            db.session.rollback()
-
-            print()
-            print("=" * 70)
-            print(
-                f"FAILED TO EXECUTE USER "
-                f"{company.user_id}"
-            )
-            print("=" * 70)
-
-            print(
-                "Exception type:",
-                type(e).__name__
-            )
-
-            print(
-                "Exception:",
-                str(e)
-            )
-
-            print()
-            print("FULL TRACEBACK:")
-            traceback.print_exc()
-
-            print()
-            print(
-                "last_scheduled_run_at was NOT updated."
-            )
-
-            print(
-                "The next GitHub Actions run can retry "
-                "this occurrence."
-            )
-
-            print("=" * 70)
-
-            # IMPORTANT:
-            # Do NOT update last_scheduled_run_at here.
-
-            # Continue processing other companies.
-            continue
+        # Next cron calculation starts after this post.
+        after_utc = scheduled_at
 
 
 # ============================================================
-# CHECK ALL SCHEDULES
+# 5. MAINTAIN RECURRING POSTS FOR ALL COMPANIES
 # ============================================================
 
-def check_all_schedules():
+def maintain_all_recurring_posts():
+    """
+    Find every company that has a recurring schedule and ensure
+    that each company has K future generated posts.
+    """
 
-    now_utc = datetime.now(timezone.utc)
-
-    print()
-    print("=" * 70)
-    print("SCHEDULER STARTED")
-    print("=" * 70)
-
-    print(
-        "Current UTC time:",
-        now_utc
+    companies = (
+        CompanyInfo.query
+        .filter(
+            CompanyInfo.scheduled_time.isnot(None)
+        )
+        .all()
     )
-
-    print("=" * 70)
-
-    # --------------------------------------------------------
-    # Get all companies that have a schedule
-    # --------------------------------------------------------
-
-    companies = CompanyInfo.query.filter(
-        CompanyInfo.scheduled_time.isnot(None)
-    ).all()
-
-    print()
-    print(
-        f"Found {len(companies)} scheduled companies"
-    )
-
-    # --------------------------------------------------------
-    # Process every company
-    # --------------------------------------------------------
 
     for company in companies:
 
-        print()
-        print(
-            "#" * 70
-        )
-
-        print(
-            f"Starting company: {company.user_id}"
-        )
-
-        print(
-            "#" * 70
-        )
-
         try:
 
-            process_company_schedule(
-                company,
-                now_utc
+            maintain_recurring_posts(
+                company
             )
 
         except Exception as e:
 
             db.session.rollback()
 
-            print()
             print(
-                f"ERROR PROCESSING USER "
-                f"{company.user_id}"
+                f"Recurring generation failed for "
+                f"user {company.user_id}: {e}"
             )
-
-            print(
-                "Exception type:",
-                type(e).__name__
-            )
-
-            print(
-                "Exception:",
-                str(e)
-            )
-
-            print()
-            print("FULL TRACEBACK:")
-
-            traceback.print_exc()
-
-            # Continue with next company
-            continue
-
-    print()
-    print("=" * 70)
-    print("SCHEDULER FINISHED")
-    print("=" * 70)
-    print()
 
 
 # ============================================================
-# MAIN ENTRY POINT
+# 6. PUBLISH DUE RECURRING POSTS
 # ============================================================
 
-if __name__ == "__main__":
+def publish_due_recurring_posts():
+    """
+    Publish generated recurring posts whose scheduled time
+    has arrived.
+    """
 
-    print()
-    print("=" * 70)
-    print("STARTING SCHEDULER APPLICATION")
-    print("=" * 70)
+    now_utc = datetime.now(UTC)
 
-    try:
+    posts = (
+        RecurringContent.query
+        .filter(
+            RecurringContent.status == "scheduled",
+            RecurringContent.scheduled_at <= now_utc
+        )
+        .order_by(
+            RecurringContent.scheduled_at.asc()
+        )
+        .all()
+    )
 
-        with app.app_context():
+    for post in posts:
 
-            check_all_schedules()
+        try:
 
-    except Exception as e:
+            # Mark first so this post is not selected again.
+            post.status = "publishing"
+            db.session.commit()
 
-        print()
-        print("=" * 70)
-        print("FATAL SCHEDULER ERROR")
-        print("=" * 70)
+            publish_to_facebook(
+                message=post.post_content,
+                user_id=post.user_id
+            )
+
+            post.status = "published"
+            db.session.commit()
+
+            print(
+                f"Recurring post {post.id} published."
+            )
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            post.status = "failed"
+            db.session.commit()
+
+            print(
+                f"Recurring post {post.id} failed: {e}"
+            )
+
+
+# ============================================================
+# 7. PUBLISH CUSTOM CONTENT JOBS
+# ============================================================
+
+def publish_due_content_jobs():
+    """
+    Publish custom posts created/scheduled by the user.
+
+    These already contain final post_content, so NO AI content
+    generation happens here.
+    """
+
+    now_utc = datetime.now(UTC)
+
+    jobs = (
+        ContentJob.query
+        .filter(
+            ContentJob.status == "scheduled",
+            ContentJob.scheduled_at <= now_utc
+        )
+        .order_by(
+            ContentJob.scheduled_at.asc()
+        )
+        .all()
+    )
+
+    for job in jobs:
+
+        try:
+
+            job.status = "publishing"
+            db.session.commit()
+
+            publish_to_facebook(
+                message=job.post_content,
+                user_id=job.user_id
+            )
+
+            job.status = "published"
+            job.updated_at = datetime.now(UTC)
+
+            db.session.commit()
+
+            print(
+                f"ContentJob {job.id} published."
+            )
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            job.status = "failed"
+            job.updated_at = datetime.now(UTC)
+
+            db.session.commit()
+
+            print(
+                f"ContentJob {job.id} failed: {e}"
+            )
+
+
+# ============================================================
+# 8. MAIN SCHEDULER CYCLE
+# ============================================================
+
+def scheduler_cycle():
+    """
+    One complete scheduler cycle.
+
+    Order:
+
+    1. Publish recurring posts that are due.
+    2. Publish custom posts that are due.
+    3. Refill recurring posts until every company has K
+       future posts.
+    """
+
+    with app.app_context():
 
         print(
-            "Exception type:",
-            type(e).__name__
+            f"Scheduler check: {datetime.now(UTC)}"
         )
 
-        print(
-            "Exception:",
-            str(e)
-        )
+        publish_due_recurring_posts()
 
-        print()
-        print("FULL TRACEBACK:")
+        publish_due_content_jobs()
 
-        traceback.print_exc()
+        maintain_all_recurring_posts()
 
-        print("=" * 70)
 
-        # Make GitHub Actions recognize this as a failed job
-        raise
+# ============================================================
+# 9. APSCHEDULER
+# ============================================================
 
-    finally:
+scheduler = BackgroundScheduler(
+    timezone="UTC"
+)
 
-        print()
-        print("=" * 70)
-        print("SCHEDULER PROCESS EXITING")
-        print("=" * 70)
+
+def start_scheduler():
+    """
+    Start APScheduler.
+
+    Call this once when the Flask application starts.
+    """
+
+    if scheduler.running:
+        return
+
+    scheduler.add_job(
+        scheduler_cycle,
+        trigger="interval",
+        seconds=CHECK_INTERVAL_SECONDS,
+        id="social_content_scheduler",
+        replace_existing=True,
+        max_instances=1
+    )
+
+    scheduler.start()
+
+    print(
+        f"APScheduler started. "
+        f"Checking every {CHECK_INTERVAL_SECONDS} seconds."
+    )

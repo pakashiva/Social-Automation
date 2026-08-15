@@ -1018,3 +1018,167 @@ body.schedule-modal-open {
         width: 100%;
     }
 }
+
+/* =========================================================
+   Content Calendar
+   ========================================================= */
+
+.calendar-page {
+    width: 100%;
+}
+
+
+.calendar-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+}
+
+
+/* =========================================================
+   FullCalendar overrides
+   ========================================================= */
+
+#content-calendar {
+    width: 100%;
+    font-family: var(--font-sans);
+}
+
+
+/* Calendar header */
+
+.fc .fc-toolbar {
+    margin-bottom: var(--space-5);
+}
+
+
+.fc .fc-toolbar-title {
+    font-family: var(--font-serif);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+
+/* Buttons */
+
+.fc .fc-button {
+    background: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+
+.fc .fc-button:hover {
+    background: var(--color-primary-strong);
+    border-color: var(--color-primary-strong);
+}
+
+
+.fc .fc-button:focus {
+    box-shadow: none;
+}
+
+
+.fc .fc-button-active {
+    background: var(--color-primary-strong) !important;
+    border-color: var(--color-primary-strong) !important;
+}
+
+
+/* Calendar cells */
+
+.fc .fc-daygrid-day {
+    min-height: 120px;
+}
+
+
+.fc .fc-daygrid-day-number {
+    color: var(--color-ink);
+    font-weight: 600;
+    padding: var(--space-2);
+}
+
+
+/* Today */
+
+.fc .fc-day-today {
+    background: var(--color-surface-muted) !important;
+}
+
+
+/* Events */
+
+.fc .fc-event {
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 3px 6px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+
+/* Week / Day time slots */
+
+.fc .fc-timegrid-slot {
+    height: 3.5rem;
+}
+
+
+/* Weekday headings */
+
+.fc .fc-col-header-cell-cushion {
+    color: var(--color-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+
+/* Remove unnecessary focus outline */
+
+.fc a {
+    text-decoration: none;
+}
+
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    .calendar-card {
+        padding: var(--space-3);
+    }
+
+
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+
+    .fc .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+    }
+
+
+    .fc .fc-toolbar-title {
+        font-size: 1.3rem;
+    }
+
+
+    .fc .fc-daygrid-day {
+        min-height: 90px;
+    }
+
+}
