@@ -130,9 +130,10 @@ class CompanyInfo(db.Model):
         nullable=False
     )
 
-    last_scheduled_run_at = db.Column(
-        db.DateTime,
-        nullable=True
+    platforms = db.Column(
+    db.JSON,
+    nullable=True,
+    default=list
     )
 
 

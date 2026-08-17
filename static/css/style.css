@@ -1190,3 +1190,37 @@ body.is-auth .page {
     padding-top: 24px;
     padding-bottom: 24px;
 }
+
+/* Platform selection */
+
+.platform-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.platform-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.platform-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    appearance: auto;
+}
+
+.platform-checkbox span {
+    margin: 0;
+}
+
+.platform-note {
+    display: block;
+    margin-top: 10px;
+}

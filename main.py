@@ -257,7 +257,7 @@ def login():
 
     return render_page(
         "login.html",
-        "Login — CorpAI Media",
+        "Login — ELVA SocialAI",
         "login"
     )
 
@@ -299,40 +299,58 @@ def signup():
         "Sign Up — ELVA SocialAI",
         "signup"
     )
-
 @app.route("/schedule_post", methods=["POST"])
 @jwt_required()
 def schedule_post():
+
     user_id = get_jwt_identity()
+
     input_text = request.form.get("schedule_task")
     timezone = request.form.get("timezone")
+
+    platforms = request.form.getlist("platforms")
 
     if not input_text:
         return "Schedule instruction is required.", 400
 
-    cron_expression = convert_to_cron(input_text)
-    print("CRON" , cron_expression)
-    print("TIME ZONE" , timezone)
+    if not platforms:
+        return "Please select at least one platform.", 400
 
-    company = CompanyInfo.query.filter_by(user_id=user_id).first()
+    cron_expression = convert_to_cron(input_text)
+
+    print("CRON:", cron_expression)
+    print("TIME ZONE:", timezone)
+    print("PLATFORMS:", platforms)
+
+    company = CompanyInfo.query.filter_by(
+        user_id=user_id
+    ).first()
 
     if not company:
+
         company = CompanyInfo(
             user_id=user_id,
-            scheduled_time = cron_expression,
-            timezone = timezone
+            scheduled_time=cron_expression,
+            timezone=timezone,
+            platforms=platforms
         )
+
         db.session.add(company)
+
     else:
+
         company.scheduled_time = cron_expression
         company.timezone = timezone
+        company.platforms = platforms
 
-    db.session.commit()    
+    db.session.commit()
 
-    flash("Schedule updated successfully" , "success")
+    flash(
+        "Schedule updated successfully",
+        "success"
+    )
 
-    return redirect(url_for('schedule'))
-
+    return redirect(url_for("schedule"))
 # Connecting to LinkedIN
 
 @app.route('/connect_linkedIn')

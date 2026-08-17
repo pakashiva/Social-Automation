@@ -1,6 +1,6 @@
 from datetime import datetime, UTC
 from zoneinfo import ZoneInfo
-
+import traceback
 from apscheduler.schedulers.background import BackgroundScheduler
 from croniter import croniter
 
@@ -14,9 +14,13 @@ from initialize_database.models import (
 
 from agents.topic_evaluator.eval_functions import generate_topic
 from rag_system.rag_functions import retrieve_semantic_chunks
-from agents.content_writer_agent.content_functions import generate_linkedin_content
+from agents.content_writer_agent.content_functions import (generate_linkedin_content , 
+                                                           generate_facebook_content , 
+                                                           generate_instagram_content)
 
-from publisher.facebook_functions import publish_to_facebook
+from publisher.facebook_functions import (publish_to_facebook , 
+                                          publish_to_instagram , 
+                                          publish_to_linkedin)
 
 
 # ============================================================
@@ -24,7 +28,7 @@ from publisher.facebook_functions import publish_to_facebook
 # ============================================================
 
 # Number of future recurring posts we always want ready.
-K = 2
+K = 3
 
 # How often APScheduler checks for work.
 CHECK_INTERVAL_SECONDS = 60
@@ -33,14 +37,12 @@ CHECK_INTERVAL_SECONDS = 60
 # ============================================================
 # 1. GENERATE CONTENT
 # ============================================================
-
-def generate_content(user_id):
+def generate_content(user_id, platform):
     """
-    Generate one recurring post for a user.
+    Generate one platform-specific recurring post.
 
-    This function ONLY generates content.
-    It does not save to the database.
-    It does not publish anything.
+    This function only generates content.
+    It does not save or publish anything.
     """
 
     output = generate_topic(
@@ -52,16 +54,45 @@ def generate_content(user_id):
         user_id=user_id
     )
 
-    post = generate_linkedin_content(
-        pillar=output.pillar,
-        topic=output.topic,
-        post_format=output.post_format,
-        brand_voice=output.brand_voice,
-        pillar_guidlines=data
-    )
+    if platform == "linkedin":
 
-    # Some LLM libraries return an AIMessage.
-    # Others may already return a string.
+        post = generate_linkedin_content(
+            pillar=output.pillar,
+            topic=output.topic,
+            post_format=output.post_format,
+            brand_voice=output.brand_voice,
+            pillar_guidlines=data
+        )
+
+    elif platform == "facebook":
+
+        # Replace this with your existing
+        # Facebook content generation function.
+        post = generate_facebook_content(
+            pillar=output.pillar,
+            topic=output.topic,
+            post_format=output.post_format,
+            brand_voice=output.brand_voice,
+            pillar_guidlines=data
+        )
+
+    elif platform == "instagram":
+
+        # Replace this with your existing
+        # Instagram content generation function.
+        post = generate_instagram_content(
+            pillar=output.pillar,
+            topic=output.topic,
+            post_format=output.post_format,
+            brand_voice=output.brand_voice,
+            pillar_guidlines=data
+        )
+
+    else:
+        raise ValueError(
+            f"Unsupported platform: {platform}"
+        )
+
     if hasattr(post, "content"):
         return post.content
 
@@ -111,25 +142,30 @@ def get_next_schedule(company, after_utc=None):
 # 3. CREATE ONE RECURRING POST
 # ============================================================
 
-def create_recurring_post(company, scheduled_at):
+def create_recurring_post(company, scheduled_at, platform):
     """
-    Generate one post and save it into RecurringContent.
-
-    This does NOT publish the post.
+    Generate one platform-specific post
+    and save it into RecurringContent.
     """
 
     print(
-        f"Generating recurring content for user "
-        f"{company.user_id}"
+        f"Generating {platform} content "
+        f"for user {company.user_id}"
     )
 
     content = generate_content(
-        user_id=company.user_id
+        user_id=company.user_id,
+        platform=platform
     )
+
+    if not content:
+        raise ValueError(
+            f"Generated content is empty for {platform}"
+        )
 
     recurring_post = RecurringContent(
         user_id=company.user_id,
-        platform="facebook",
+        platform=platform,
         scheduled_at=scheduled_at,
         post_content=content,
         status="scheduled"
@@ -139,7 +175,7 @@ def create_recurring_post(company, scheduled_at):
     db.session.commit()
 
     print(
-        f"Recurring content created for "
+        f"Recurring {platform} post created for "
         f"{scheduled_at}"
     )
 
@@ -152,34 +188,46 @@ def create_recurring_post(company, scheduled_at):
 
 def maintain_recurring_posts(company):
     """
-    Make sure this company always has K future recurring posts.
+    Keep exactly K future recurring posts ready.
+
+    K counts individual platform posts.
 
     Example:
 
-        K = 2
+        K = 3
+        platforms = ["linkedin", "facebook", "instagram"]
 
-        Existing:
-            Monday
-            Wednesday
+        Result:
 
-        Nothing happens.
+        Monday 10 AM     LinkedIn
+        Monday 10 AM     Facebook
+        Monday 10 AM     Instagram
 
-        After Monday is published:
 
-        Existing future:
-            Wednesday
+        K = 3
+        platforms = ["linkedin", "facebook"]
 
-        Only 1 exists.
+        Result:
 
-        This function generates:
-            Friday
-
-        Future posts are again:
-            Wednesday
-            Friday
+        Monday 10 AM       LinkedIn
+        Monday 10 AM       Facebook
+        Wednesday 10 AM    LinkedIn
     """
 
     now_utc = datetime.now(UTC)
+
+    # --------------------------------------------------------
+    # Get selected platforms
+    # --------------------------------------------------------
+
+    platforms = company.platforms or []
+
+    if not platforms:
+        print(
+            f"No platforms selected for user "
+            f"{company.user_id}"
+        )
+        return
 
     # --------------------------------------------------------
     # Find existing future recurring posts
@@ -209,42 +257,57 @@ def maintain_recurring_posts(company):
     )
 
     # --------------------------------------------------------
-    # Determine where cron calculation should start
+    # Determine where cron calculation starts
     # --------------------------------------------------------
 
     if future_posts:
+
         after_utc = future_posts[-1].scheduled_at
 
-        # SQLite/Postgres behaviour can sometimes return
-        # a naive datetime depending on configuration.
         if after_utc.tzinfo is None:
             after_utc = after_utc.replace(
                 tzinfo=UTC
             )
 
     else:
+
         after_utc = now_utc
 
     # --------------------------------------------------------
     # Generate missing posts
     # --------------------------------------------------------
 
-    for _ in range(missing_posts):
+    generated = 0
 
+    while generated < missing_posts:
+
+        # Get the next recurring schedule time
         scheduled_at = get_next_schedule(
             company=company,
             after_utc=after_utc
         )
 
-        create_recurring_post(
-            company=company,
-            scheduled_at=scheduled_at
-        )
+        # Generate one post for every selected
+        # platform at this occurrence.
+        for platform in platforms:
 
-        # Next cron calculation starts after this post.
+            if generated >= missing_posts:
+                break
+
+            create_recurring_post(
+                company=company,
+                scheduled_at=scheduled_at,
+                platform=platform
+            )
+
+            generated += 1
+
+        # Next cron calculation starts after
+        # this recurring occurrence.
         after_utc = scheduled_at
 
 
+        
 # ============================================================
 # 5. MAINTAIN RECURRING POSTS FOR ALL COMPANIES
 # ============================================================
@@ -284,11 +347,10 @@ def maintain_all_recurring_posts():
 # ============================================================
 # 6. PUBLISH DUE RECURRING POSTS
 # ============================================================
-
 def publish_due_recurring_posts():
     """
-    Publish generated recurring posts whose scheduled time
-    has arrived.
+    Publish recurring posts whose scheduled time has arrived.
+    Uses the publisher belonging to the post's platform.
     """
 
     now_utc = datetime.now(UTC)
@@ -309,20 +371,43 @@ def publish_due_recurring_posts():
 
         try:
 
-            # Mark first so this post is not selected again.
             post.status = "publishing"
             db.session.commit()
 
-            publish_to_facebook(
-                message=post.post_content,
-                user_id=post.user_id
-            )
+            if post.platform == "facebook":
+
+                publish_to_facebook(
+                    message=post.post_content,
+                    user_id=post.user_id
+                )
+
+            elif post.platform == "linkedin":
+
+                publish_to_linkedin(
+                    message=post.post_content,
+                    user_id=post.user_id
+                )
+
+            elif post.platform == "instagram":
+
+                publish_to_instagram(
+                    message=post.post_content,
+                    user_id=post.user_id
+                )
+
+            else:
+
+                raise ValueError(
+                    f"Unsupported platform: "
+                    f"{post.platform}"
+                )
 
             post.status = "published"
             db.session.commit()
 
             print(
-                f"Recurring post {post.id} published."
+                f"Recurring {post.platform} post "
+                f"{post.id} published."
             )
 
         except Exception as e:
@@ -333,10 +418,11 @@ def publish_due_recurring_posts():
             db.session.commit()
 
             print(
-                f"Recurring post {post.id} failed: {e}"
+                f"Recurring {post.platform} post "
+                f"{post.id} failed: {e}"
             )
 
-
+            traceback.print_exc()
 # ============================================================
 # 7. PUBLISH CUSTOM CONTENT JOBS
 # ============================================================
@@ -362,6 +448,8 @@ def publish_due_content_jobs():
         )
         .all()
     )
+
+    print("Job recieved:" , jobs)
 
     for job in jobs:
 
@@ -396,6 +484,7 @@ def publish_due_content_jobs():
             print(
                 f"ContentJob {job.id} failed: {e}"
             )
+            traceback.print_exc()
 
 
 # ============================================================
