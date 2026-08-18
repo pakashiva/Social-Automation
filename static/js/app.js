@@ -853,7 +853,104 @@ async function loadContentCalendar() {
             "<p>Unable to load scheduled content.</p>";
     }
 }
+// Publish Content(Manually)
 
+async function publishContentNow() {
+
+    const publishButton =
+        document.getElementById("publish-content");
+
+    const messageElement =
+        document.getElementById("publish-message");
+
+    const content =
+        document.getElementById("generated-content").value.trim();
+
+    const platform =
+        document.getElementById("content-platform").value;
+
+    if (!content) {
+
+        messageElement.textContent =
+            "Please generate some content first.";
+
+        messageElement.hidden = false;
+
+        return;
+    }
+
+    publishButton.disabled = true;
+
+    messageElement.hidden = false;
+    messageElement.textContent = "Publishing...";
+
+    try {
+
+        const response = await fetch(
+            "/api/publish-content",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                credentials: "same-origin",
+
+                body: JSON.stringify({
+                    content: content,
+                    platform: platform
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.error || "Publishing failed."
+            );
+        }
+
+        messageElement.textContent =
+            data.message || "Published successfully.";
+
+        messageElement.hidden = false;
+
+    } catch (error) {
+
+        console.error(
+            "Publish error:",
+            error
+        );
+
+        messageElement.textContent =
+            error.message || "Unable to publish content.";
+
+        messageElement.hidden = false;
+
+    } finally {
+
+        publishButton.disabled = false;
+    }
+}
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        const publishButton =
+            document.getElementById("publish-content");
+
+        if (publishButton) {
+
+            publishButton.addEventListener(
+                "click",
+                publishContentNow
+            );
+        }
+    }
+);
 
 // ============================================================
 // INITIALIZE CONTENT CALENDAR

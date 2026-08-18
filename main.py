@@ -646,6 +646,76 @@ def get_content_calendar():
 
     return jsonify(events)
 
+@app.route("/api/publish-content", methods=["POST"])
+@jwt_required()
+def publish_content():
+
+    from publisher.facebook_functions import publish_to_facebook , publish_to_instagram , publish_to_linkedin
+
+    user_id = get_jwt_identity()
+
+    data = request.get_json()
+
+    content = data.get("content")
+    platform = data.get("platform")
+
+    if not content:
+        return jsonify({
+            "error": "Content is required."
+        }), 400
+
+    if not platform:
+        return jsonify({
+            "error": "Platform is required."
+        }), 400
+
+    try:
+
+        if platform == "linkedin":
+
+            publish_to_linkedin(
+                message=content,
+                user_id=user_id
+            )
+
+        elif platform == "facebook":
+
+            publish_to_facebook(
+                message=content,
+                user_id=user_id
+            )
+
+        elif platform == "instagram":
+
+            return jsonify({
+                "error":
+                    "Instagram publishing requires an image."
+            }), 400
+
+        else:
+
+            return jsonify({
+                "error":
+                    f"Unsupported platform: {platform}"
+            }), 400
+
+        return jsonify({
+            "success": True,
+            "message":
+                f"Content published successfully to {platform.title()}."
+        })
+
+    except Exception as e:
+
+        print(
+            "Publish content error:",
+            repr(e)
+        )
+
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 if __name__ == "__main__":
 
