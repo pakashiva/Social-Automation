@@ -216,6 +216,11 @@ class ContentJob(db.Model):
         nullable=False
     )
 
+    email_notified_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
+    )
+
     status = db.Column(
         db.String(30),
         default="draft",
@@ -270,4 +275,9 @@ class RecurringContent(db.Model):
         nullable=False,
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC)
+    )
+    
+    email_notified_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
     )

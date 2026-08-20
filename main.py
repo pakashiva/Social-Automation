@@ -1,6 +1,6 @@
 import os
 import psutil
-
+from zoneinfo import ZoneInfo
 process = psutil.Process(os.getpid())
 
 def mem(label):
@@ -43,13 +43,16 @@ from werkzeug.security import check_password_hash, generate_password_hash
 mem("werkzeug")
 
 from flask import (
+    Response , 
     flash,
+    get_flashed_messages,
     make_response,
     redirect,
     render_template,
     request,
     url_for,
-    jsonify
+    jsonify,
+    stream_with_context
 )
 mem("flask")
 
@@ -299,6 +302,7 @@ def signup():
         "Sign Up — ELVA SocialAI",
         "signup"
     )
+
 @app.route("/schedule_post", methods=["POST"])
 @jwt_required()
 def schedule_post():
@@ -534,10 +538,11 @@ def save_company_info():
 
     collection_name = str(user_id)
 
-    try:
-        from rag_system.rag_functions import build_vector_store
+    import time 
+    start = time.perf_counter()
 
-        
+    try:
+        from rag_system.rag_functions import build_vector_store        
         build_vector_store(COLLECTION_NAME=collection_name , PDF_PATH=pdf_path)
 
     except Exception as e:
@@ -550,12 +555,13 @@ def save_company_info():
     try:
 
         from pdf_to_json.strategy_loader import convert_pdf_to_strategy
-
-
         strategy = convert_pdf_to_strategy(pdf_path=pdf_path)
     except Exception as e:
-        flash(f"{e} This is not good", "error")
+        flash(f"{e}", "error")
         return redirect(url_for('company'))
+
+    end = time.perf_counter()
+    print(f"Took {end - start:.2f} seconds")
 
     strategy_json = strategy.model_dump(mode="json")
 
@@ -594,6 +600,162 @@ def logout():
     unset_jwt_cookies(response)
     flash("You have been logged out successfully.", "success")
     return response
+
+# generrate content routes
+@app.route(
+        "/generate_content",
+        methods=["POST"],
+        strict_slashes=False,
+    )
+@jwt_required()
+def generate_content():
+    VALID_PLATFORMS = {"linkedin", "instagram", "facebook"}
+    user_id = get_jwt_identity()
+    payload = request.get_json(silent=True) or {}
+
+    content_source = (payload.get("content_source") or "").strip()
+    platform = (payload.get("platform") or "").strip().lower()
+    user_input = (payload.get("user_input") or "").strip()
+
+    valid_sources = {"inspiration", "existing_post", "generate"}
+
+    if content_source not in valid_sources:
+        return jsonify({
+                "error": "Please choose a valid content source."
+            }), 400
+
+    if platform not in VALID_PLATFORMS:
+        return jsonify({
+                "error": "Please choose a valid platform."
+            }), 400
+
+    if content_source != "generate" and not user_input:
+        return jsonify({
+                "error": "Please provide input for the selected content source."
+            }), 400
+
+    brand_context = None
+    company = CompanyInfo.query.filter_by(user_id=user_id).first()
+
+    if company and company.brand_context:
+        brand_context = company.brand_context
+
+    from agents.user_topic_generator.functions import stream_generated_content
+
+    def generate():
+        try:
+            for chunk in stream_generated_content(
+                    platform=platform,
+                    user_input=user_input,
+                    content_source=content_source,
+                    brand_context=brand_context,
+                ):
+                if chunk:
+                    yield chunk
+        except Exception as exc:
+            print("CONTENT GENERATION ERROR:", exc, flush=True)
+            traceback.print_exc()
+            yield (
+                    "\n\nUnable to generate content right now. "
+                    "Please try again."
+                )
+
+    return Response(
+            stream_with_context(generate()),
+            mimetype="text/plain; charset=utf-8",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
+@app.route(
+        "/schedule_content",
+        methods=["POST"],
+        strict_slashes=False,
+    )
+@jwt_required()
+def schedule_content():
+    VALID_PLATFORMS = {"linkedin", "instagram", "facebook"}
+    user_id = get_jwt_identity()
+    payload = request.get_json(silent=True) or {}
+
+    platform = (payload.get("platform") or "").strip().lower()
+    scheduled_at_raw = (payload.get("scheduled_at") or "").strip()
+    post_content = payload.get("post_content")
+
+    if isinstance(post_content, str):
+        post_content = post_content.strip() or None
+    else:
+        post_content = None
+
+    if platform not in VALID_PLATFORMS:
+        return jsonify({
+                "error": "Please choose a valid platform."
+            }), 400
+
+    if not scheduled_at_raw:
+        return jsonify({
+                "error": "Please choose a date and time."
+            }), 400
+
+    try:
+        parsed = datetime.fromisoformat(scheduled_at_raw)
+    except ValueError:
+        return jsonify({
+                "error": "Please choose a valid date and time."
+            }), 400
+
+    company = CompanyInfo.query.filter_by(user_id=user_id).first()
+    timezone_name = (
+            company.timezone
+            if company and company.timezone
+            else "Asia/Kolkata"
+        )
+
+    try:
+        timezone = ZoneInfo(timezone_name)
+    except Exception:
+        timezone = ZoneInfo("Asia/Kolkata")
+
+    if parsed.tzinfo is None:
+        scheduled_at = parsed.replace(tzinfo=timezone)
+    else:
+        scheduled_at = parsed.astimezone(timezone)
+
+    job = ContentJob(
+            user_id=user_id,
+            platform=platform,
+            post_content=post_content,
+            scheduled_at=scheduled_at,
+            status="scheduled",
+            updated_at=datetime.now(UTC),
+        )
+
+    try:
+        db.session.add(job)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        print("SCHEDULE SAVE ERROR:", exc, flush=True)
+        traceback.print_exc()
+        return jsonify({
+                "error": "Unable to save the schedule. Please try again."
+            }), 500
+
+    flash("Content scheduled successfully.", "success")
+    flashes = [
+            {"category": category, "message": message}
+            for category, message in get_flashed_messages(with_categories=True)
+        ]
+
+    return jsonify({
+            "ok": True,
+            "message": "Content scheduled successfully.",
+            "flashes": flashes,
+        })
+
 
 @app.route("/api/content-calendar", methods=["GET"])
 @jwt_required()

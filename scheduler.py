@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 from zoneinfo import ZoneInfo
 import traceback
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -6,10 +6,13 @@ from croniter import croniter
 
 from app import app, db
 
+from services.notify_service import send_email
+
 from initialize_database.models import (
     CompanyInfo,
     ContentJob,
     RecurringContent,
+    User
 )
 
 from agents.topic_evaluator.eval_functions import generate_topic
@@ -488,7 +491,181 @@ def publish_due_content_jobs():
 
 
 # ============================================================
-# 8. MAIN SCHEDULER CYCLE
+# 8. NOTIFY SERVICES
+# ============================================================
+
+def send_post_notification(
+    *,
+    user,
+    platform,
+    scheduled_at,
+    post_content,
+):
+    """
+    Send the 1-hour-before-publishing notification.
+
+    Email content is intentionally left to the application owner.
+    """
+
+    if not user or not user.email:
+        raise ValueError(
+            "User email is missing"
+        )
+
+    # You will provide the actual email content.
+    subject = "Your scheduled post is coming up"
+
+    body = """
+    YOUR EMAIL CONTENT HERE
+    """
+
+    return send_email(
+        recipient=user.email,
+        subject=subject,
+        body=body,
+    )
+
+def is_notification_due(scheduled_at, now):
+    notification_time = (
+        scheduled_at - timedelta(hours=1)
+    )
+
+    return (
+        notification_time <= now
+        and scheduled_at > now
+    )
+
+def notify_due_content_jobs():
+
+    now_utc = datetime.now(UTC)
+
+    notification_deadline = (
+        now_utc + timedelta(hours=1)
+    )
+
+    jobs = (
+        ContentJob.query
+        .filter(
+            ContentJob.status == "scheduled",
+
+            ContentJob.scheduled_at.isnot(None),
+
+            ContentJob.scheduled_at > now_utc,
+
+            ContentJob.scheduled_at <= notification_deadline,
+
+            ContentJob.email_notified_at.is_(None),
+        )
+        .order_by(
+            ContentJob.scheduled_at.asc()
+        )
+        .all()
+    )
+
+    for job in jobs:
+
+        try:
+
+            user = User.query.filter_by(
+                user_id=job.user_id
+            ).first()
+
+            if not user:
+                print(
+                    f"Notification skipped: "
+                    f"user {job.user_id} not found"
+                )
+                continue
+
+            send_post_notification(
+                user=user,
+                platform=job.platform,
+                scheduled_at=job.scheduled_at,
+                post_content=job.post_content,
+            )
+
+            job.email_notified_at = datetime.now(UTC)
+
+            db.session.commit()
+
+            print(
+                f"Notification sent for ContentJob "
+                f"{job.id}"
+            )
+
+        except Exception as exc:
+
+            db.session.rollback()
+
+            print(
+                f"Notification failed for "
+                f"ContentJob {job.id}: {exc}"
+            )
+
+
+def notify_due_recurring_posts():
+
+    now_utc = datetime.now(UTC)
+
+    notification_deadline = (
+        now_utc + timedelta(hours=1)
+    )
+
+    posts = (
+        RecurringContent.query
+        .filter(
+            RecurringContent.status == "scheduled",
+
+            RecurringContent.scheduled_at > now_utc,
+
+            RecurringContent.scheduled_at <= notification_deadline,
+
+            RecurringContent.email_notified_at.is_(None),
+        )
+        .order_by(
+            RecurringContent.scheduled_at.asc()
+        )
+        .all()
+    )
+
+    for post in posts:
+
+        try:
+
+            user = User.query.filter_by(
+                user_id=post.user_id
+            ).first()
+
+            if not user:
+                continue
+
+            send_post_notification(
+                user=user,
+                platform=post.platform,
+                scheduled_at=post.scheduled_at,
+                post_content=post.post_content,
+            )
+
+            post.email_notified_at = datetime.now(UTC)
+
+            db.session.commit()
+
+            print(
+                f"Notification sent for "
+                f"RecurringContent {post.id}"
+            )
+
+        except Exception as exc:
+
+            db.session.rollback()
+
+            print(
+                f"Notification failed for "
+                f"RecurringContent {post.id}: {exc}"
+            )
+
+# ============================================================
+# 9. MAIN SCHEDULER CYCLE
 # ============================================================
 
 def scheduler_cycle():
@@ -509,6 +686,10 @@ def scheduler_cycle():
             f"Scheduler check: {datetime.now(UTC)}"
         )
 
+        notify_due_recurring_posts()
+
+        notify_due_content_jobs()
+
         publish_due_recurring_posts()
 
         publish_due_content_jobs()
@@ -517,7 +698,7 @@ def scheduler_cycle():
 
 
 # ============================================================
-# 9. APSCHEDULER
+# 10. APSCHEDULER
 # ============================================================
 
 scheduler = BackgroundScheduler(

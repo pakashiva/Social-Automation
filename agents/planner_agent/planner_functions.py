@@ -48,16 +48,6 @@ def save_to_database(output , user_id):
         )
         db.session.commit()
 
-def read_live_events():
-
-    " Use this tool to read 'live_events.txt' file. And proceed as per the instructions"
-
-    BASE_DIR = Path(__file__).resolve().parent.parent.parent
-    filepath = BASE_DIR / "agents" / "planner_agent" / "live_events.txt"
-
-    with open(filepath , "r" , encoding='utf-8') as f:
-        return f.read()
-
 
 def get_stragtegy_and_brand_content(user_id):
     """ Use this tool to read the content strategy which contains 
@@ -84,7 +74,6 @@ def load_planner():
 def invoke_planner(user_id , feedback : str | None = None):
     planner = load_planner()
 
-    live_events = read_live_events()
     previous_planned = get_previous_history(user_id=user_id)
     content_strategy , brand_context = get_stragtegy_and_brand_content(user_id=user_id)
 
@@ -93,7 +82,6 @@ def invoke_planner(user_id , feedback : str | None = None):
         HumanMessage(content=f"Company Context:\n{brand_context}"),
         HumanMessage(content=f"Content Strategy:\n{content_strategy}"),
         HumanMessage(content=f"Previous Planning History:\n{previous_planned}"),
-        HumanMessage(content=f"Live Events:\n{live_events}")
     ]
 
 
