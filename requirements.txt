@@ -57,3 +57,6 @@ psutil>=7.2.2
 Flask-Migrate>=4.1.0
 
 APScheduler>=3.11.3
+
+deepeval>=4.1.9
+portalocker>=4.1.0

@@ -1,4 +1,4 @@
-import os,  chromadb
+import os,  chromadb , re
 from pathlib import Path
 from typing import List
 
@@ -37,9 +37,8 @@ from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 # CHROMA_PATH = BASE_DIR / "databases" / "chromadb"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 20
-TOP_K = 5
-FINAL_K = 5
-
+TOP_K = 3
+FINAL_K = 3
 
 
 client = chromadb.CloudClient(
@@ -59,6 +58,48 @@ def load_pdf(PDF_PATH) -> List[Document]:
     documents = loader.load()
     print(f"\nLoaded {len(documents)} pages")
     return documents
+
+# ===============================================
+# Clean Documents
+
+def remove_watermark(text: str) -> str:
+    # Remove repeated WATERMARK occurrences
+    text = re.sub(
+        r'\bWATERMARK\b(?:\s+\bWATERMARK\b){2,}',
+        '',
+        text,
+        flags=re.IGNORECASE
+    )
+
+    # Remove fragmented watermark text caused by PDF extraction
+    text = re.sub(
+        r'(?:WATERMARK[\s]*){2,}',
+        '',
+        text,
+        flags=re.IGNORECASE
+    )
+
+    # Clean excessive whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
+
+
+def clean_documents(documents):
+    cleaned = []
+
+    for doc in documents:
+        text = remove_watermark(doc.page_content)
+
+        if text.strip():
+            cleaned.append(
+                Document(
+                    page_content=text,
+                    metadata=doc.metadata
+                )
+            )
+
+    return cleaned
 
 # Split Documents
 
@@ -125,6 +166,7 @@ def build_vector_store(COLLECTION_NAME , PDF_PATH):
     
     print("Creating new Chroma Database")
     docs = load_pdf(PDF_PATH)
+    docs = clean_documents(docs)
     chunks = split_documents(docs)
     create_vectorstore(chunks , COLLECTION_NAME)
 
@@ -279,9 +321,9 @@ def retrieve_semantic_chunks(pillar, user_id):
     
     data = ""
     for i, doc in enumerate(docs, start=1):
-            data += doc.page_content + '\n\n'
+        data += doc.page_content + '\n\n'
 
     if data != "":
         print("DATA REETRIEVED:" ,  data[:30])
     
-    return data
+    return docs , data
