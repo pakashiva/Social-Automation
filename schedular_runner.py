@@ -1,3 +1,6 @@
+# This files runs independently of main file on AWS EC2, the main goal of this file is to 
+# run schedular continuously and check for schedules.
+
 from threading import Event
 
 from scheduler import start_scheduler

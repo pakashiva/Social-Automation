@@ -13,7 +13,7 @@ structured_llm = llm.with_structured_output(CronSchema)
 messages = [
     SystemMessage(content=SYSTEM_PROMPT),]
 
-
+# converts human-readabel instructions into crons exprssion with help of an llm.
 
 def convert_to_cron(input_string:str) -> str:
     """
@@ -31,7 +31,7 @@ def convert_to_cron(input_string:str) -> str:
 
     return response.schedule
 
-
+# Cron expression validation.
 def validate_cron(cron_expression: str) -> bool:
     """
     Validate a standard 5-field cron expression.

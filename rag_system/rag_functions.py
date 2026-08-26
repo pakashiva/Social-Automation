@@ -29,12 +29,8 @@ from langchain_classic.retrievers.document_compressors import (
 )
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 
+# For v1 this project only uses hybrid retreiver w/o reranker.
 
-# Configuration
-
-
-# BASE_DIR = Path(__file__).resolve().parent.parent
-# CHROMA_PATH = BASE_DIR / "databases" / "chromadb"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 20
 TOP_K = 3
@@ -289,6 +285,7 @@ def create_retriever(
         multi_query
     )
     return compression
+
 
 
 # ====================================================

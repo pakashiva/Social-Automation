@@ -24,8 +24,13 @@ def logging_in():
     "redirect_uri": REDIRECT_URI,
     "state": state,
 
-    # w_prganization_social is used for posting on behalf of linkedIn.
-    # w_member_social is for member  of the company.
+'''
+SCOPES for LinkedIn dev app
+    w_member_social → allows an app to create, modify, or delete posts on behalf of an authenticated LinkedIn member
+    w_organization_social → allows an app to create, modify, or delete posts on behalf of a LinkedIn organization/page, 
+        rather than an individual member.
+    
+'''
     
     "scope": "openid profile email w_member_social"
     }
@@ -123,6 +128,7 @@ def get_author_urn(access_token):
 
     return f"urn:li:person:{member_id}"
 
+# fetchs company urn, for posting on behalf of comapany/organisation on LinkedIn
 def fetch_company_urn(access_token):
     url = (
         "https://api.linkedin.com/v2/organizationalEntityAcls"
@@ -149,6 +155,7 @@ def fetch_company_urn(access_token):
 
     return data["elements"][0]["organizationalTarget"]
 
+# Gets published posts from LinkedIn accounte.
 def get_published_posts(access_token, author_urn, count=20):
     url = (
         "https://api.linkedin.com/rest/posts"

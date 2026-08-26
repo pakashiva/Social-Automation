@@ -1,47 +1,15 @@
-import os
-import psutil
+import os ,json ,traceback
 from zoneinfo import ZoneInfo
-process = psutil.Process(os.getpid())
-
-def mem(label):
-    rss = process.memory_info().rss / 1024 / 1024
-    print(f"[MEMORY] {label}: {rss:.1f} MB", flush=True)
-
-
-mem("startup")
-
-import json
-import traceback
-mem("json + traceback")
-
 from app import app, db, jwt
-mem("app")
-
 from uuid import uuid4
 from pathlib import Path
-mem("uuid + pathlib")
-
 from ruamel.yaml import YAML
-mem("ruamel")
-
 from dotenv import load_dotenv
-mem("dotenv")
-
 from flask_sqlalchemy import SQLAlchemy
-mem("flask-sqlalchemy")
-
 from initialize_database.models import Account, PublishedPost, User, CompanyInfo , ContentJob , RecurringContent
-mem("models")
-
 from datetime import UTC, datetime, timedelta
-mem("datetime")
-
 from cron_converter.cron_conversion import convert_to_cron
-mem("cron-converter")
-
 from werkzeug.security import check_password_hash, generate_password_hash
-mem("werkzeug")
-
 from flask import (
     Response , 
     flash,
@@ -54,8 +22,6 @@ from flask import (
     jsonify,
     stream_with_context
 )
-mem("flask")
-
 from flask_jwt_extended import (
     create_access_token,
     get_jwt_identity,
@@ -63,7 +29,6 @@ from flask_jwt_extended import (
     verify_jwt_in_request,
     unset_jwt_cookies
 )
-mem("jwt")
 
 from services.linkedin_services import (
     get_author_urn,
@@ -71,7 +36,6 @@ from services.linkedin_services import (
     retrive_auth_code,
     token_exchange,
 )
-mem("linkedin")
 
 from services.meta_services import (
     exchange_meta_token,
@@ -82,13 +46,15 @@ from services.meta_services import (
     meta_login,
     retrieve_meta_auth_code,
 )
-mem("meta")
+
 
 load_dotenv()
 
+#development purpose only, recommended to use cloud storage sevices for files
 UPLOAD_FOLDER = Path("uploads")
 UPLOAD_FOLDER.mkdir(exist_ok=True)
 
+# jwt error handler.
 @jwt.expired_token_loader
 def expired_token(jwt_header, jwt_payload):
     flash("Your session has expired. Please log in again.", "warning")
@@ -113,14 +79,13 @@ def revoked_token(jwt_header, jwt_payload):
     return redirect(url_for("login"))
 
 
+# checks whether the current request has a valid JWT login token
 @app.context_processor
 def inject_auth_status():
 
     try:
         verify_jwt_in_request(optional=True)
-
         user_id = get_jwt_identity()
-
         return {
             "logged_in": user_id is not None
         }
@@ -135,7 +100,7 @@ def inject_auth_status():
 def render_page(template_name, title, active_page):
     return render_template(template_name, title=title, active_page=active_page)
 
-# Paging routing for the Flask application
+# Page routing for the Flask application
 
 @app.route("/")
 def home():
@@ -169,7 +134,6 @@ def create_content():
         "Create Content — ELVA SocialAI",
         "create_content"
     )
-
 
 @app.route("/content-calendar", methods=["GET"])
 @jwt_required()
@@ -303,6 +267,8 @@ def signup():
         "signup"
     )
 
+# Saves schedule data from schedule.html
+
 @app.route("/schedule_post", methods=["POST"])
 @jwt_required()
 def schedule_post():
@@ -321,10 +287,6 @@ def schedule_post():
         return "Please select at least one platform.", 400
 
     cron_expression = convert_to_cron(input_text)
-
-    print("CRON:", cron_expression)
-    print("TIME ZONE:", timezone)
-    print("PLATFORMS:", platforms)
 
     company = CompanyInfo.query.filter_by(
         user_id=user_id
@@ -355,7 +317,8 @@ def schedule_post():
     )
 
     return redirect(url_for("schedule"))
-# Connecting to LinkedIN
+
+# redirects to linkedIn page for user to login with linkedIn credentials
 
 @app.route('/connect_linkedIn')
 @jwt_required()
@@ -406,7 +369,7 @@ def callback():
 
     return redirect(url_for('oauth'))
 
-# Connect to Meta
+# redirects to Facebook page for user to login with Facebook credentials
 @app.route("/connect_meta")
 @jwt_required()
 def connect_meta():
@@ -415,6 +378,7 @@ def connect_meta():
 
     return redirect(meta_url)
 
+# route to retrieve Auth code, token exchange , Saving in Database for meta
 @app.route("/meta_callback")
 @jwt_required()
 def meta_callback():
@@ -496,7 +460,7 @@ def meta_callback():
     
     return redirect(url_for('oauth'))
 
-
+# Saves company data from the company.html
 @app.route('/save_company_data' , methods = ['POST'])
 @jwt_required()
 def save_company_info():
@@ -601,7 +565,7 @@ def logout():
     flash("You have been logged out successfully.", "success")
     return response
 
-# generrate content routes
+# this route recieves 'POST' request from javascript, streams generated content back to js(browser) that displays on html. 
 @app.route(
         "/generate_content",
         methods=["POST"],
@@ -670,6 +634,7 @@ def generate_content():
             },
         )
 
+# saves the scheduled data from create_content.html to db.
 @app.route(
         "/schedule_content",
         methods=["POST"],
@@ -756,7 +721,7 @@ def schedule_content():
             "flashes": flashes,
         })
 
-
+# Sends the scheduled jobs data to the browser, that to be displayed in the calendar (content_calendar.html).
 @app.route("/api/content-calendar", methods=["GET"])
 @jwt_required()
 def get_content_calendar():
@@ -808,11 +773,12 @@ def get_content_calendar():
 
     return jsonify(events)
 
+# publishes the post for 'Publish Now' button in create_content.html
 @app.route("/api/publish-content", methods=["POST"])
 @jwt_required()
 def publish_content():
 
-    from publisher.facebook_functions import publish_to_facebook , publish_to_instagram , publish_to_linkedin
+    from publisher.publisher_functions import publish_to_facebook , publish_to_instagram , publish_to_linkedin
 
     user_id = get_jwt_identity()
 

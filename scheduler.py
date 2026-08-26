@@ -21,7 +21,7 @@ from agents.content_writer_agent.content_functions import (generate_linkedin_con
                                                            generate_facebook_content , 
                                                            generate_instagram_content)
 
-from publisher.facebook_functions import (publish_to_facebook , 
+from publisher.publisher_functions import (publish_to_facebook , 
                                           publish_to_instagram , 
                                           publish_to_linkedin)
 

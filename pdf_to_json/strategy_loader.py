@@ -9,8 +9,6 @@ from pdf_to_json.strategy_schema import Strategy
 from pdf_to_json.pillar_prompt import STRATEGY_PROMPT
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 def load_pdf(pdf_path: str | Path) -> str:
     loader = PyPDFLoader(str(pdf_path))
@@ -20,6 +18,8 @@ def load_pdf(pdf_path: str | Path) -> str:
 
 strategy_llm = llm.with_structured_output(Strategy)
 
+
+# extracts the pillar names , allocation , brandvoice , post format from the uploaded pdf.
 
 def convert_pdf_to_strategy(pdf_path: str | Path) -> Strategy:
 
@@ -36,22 +36,3 @@ def convert_pdf_to_strategy(pdf_path: str | Path) -> Strategy:
 
     return strategy
 
-
-def save_strategy(pdf_path: str | Path):
-
-    strategy = convert_pdf_to_strategy(pdf_path)
-
-    output_dir = BASE_DIR / "databases" / "strategy"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    output_file = output_dir / "strategy.json"
-
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(
-            strategy.model_dump(),
-            f,
-            indent=4,
-            ensure_ascii=False,
-        )
-
-    print(f"Saved → {output_file}")
