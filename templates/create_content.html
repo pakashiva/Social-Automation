@@ -3,36 +3,55 @@
 {% block content %}
 
 <div class="page-header">
-    <div class="eyebrow">Content Studio</div>
 
-    <h1>Create Content</h1>
+    <div class="eyebrow">
+        Content Studio
+    </div>
+
+    <h1>
+        Create Content
+    </h1>
 
     <p class="lead">
         Create, refine, and publish content for your connected social media
         accounts using your company's content strategy and brand context.
     </p>
+
 </div>
 
 
 <div class="content-studio">
 
-    <!-- CONTENT SETUP -->
+    <!-- =========================================================
+         CONTENT SETUP
+         ========================================================= -->
+
     <section class="form-card">
 
         <div class="form-section">
 
             <div class="form-section__header">
-                <h2>Content Setup</h2>
+
+                <h2>
+                    Content Setup
+                </h2>
+
                 <p>
                     Choose how you want to create your content.
                 </p>
+
             </div>
 
 
-            <!-- Content Source -->
+            <!-- =================================================
+                 CONTENT SOURCE
+                 ================================================= -->
+
             <label class="field-group">
 
-                <span>Content Source</span>
+                <span>
+                    Content Source
+                </span>
 
                 <select
                     id="content-source"
@@ -52,18 +71,27 @@
 
                 </select>
 
-                <span class="field-help" id="source-help">
-                    Give the AI an idea or direction and it will create
-                    content around it.
+                <span
+                    class="field-help"
+                    id="source-help">
+
+                    Give the AI an idea or direction and it will
+                    create content around it.
+
                 </span>
 
             </label>
 
 
-            <!-- Platform -->
+            <!-- =================================================
+                 PLATFORM
+                 ================================================= -->
+
             <label class="field-group">
 
-                <span>Platform</span>
+                <span>
+                    Platform
+                </span>
 
                 <select
                     id="content-platform"
@@ -84,21 +112,31 @@
                 </select>
 
                 <span class="field-help">
-                    The generated content will be optimized for the selected
-                    platform.
+
+                    The generated content will be optimized for the
+                    selected platform.
+
                 </span>
 
             </label>
 
 
-            <!-- User Input -->
+            <!-- =================================================
+                 USER INPUT
+                 ================================================= -->
+
             <div
                 class="field-group"
                 id="content-input-wrapper">
 
-                <label for="content-input" class="form-label">
+                <label
+                    for="content-input"
+                    class="form-label">
+
                     Your Input
+
                 </label>
+
 
                 <textarea
                     id="content-input"
@@ -106,14 +144,20 @@
                     placeholder="Share your idea or inspiration..."
                     rows="9"></textarea>
 
+
                 <div class="field-meta">
 
                     <span id="input-help">
-                        You can provide an idea, topic, reference, or direction.
+
+                        You can provide an idea, topic, reference,
+                        or direction.
+
                     </span>
 
                     <span id="character-count">
+
                         0 characters
+
                     </span>
 
                 </div>
@@ -121,7 +165,10 @@
             </div>
 
 
-            <!-- Generate Button -->
+            <!-- =================================================
+                 GENERATE BUTTON
+                 ================================================= -->
+
             <div class="form-actions">
 
                 <button
@@ -129,12 +176,11 @@
                     id="generate-content"
                     class="button button--primary">
 
-                    <span class="button-spinner" aria-hidden="true"></span>
-                    <span class="button-label">Generate Content</span>
+                    <span class="button-label">
+                        Generate Content
+                    </span>
 
                 </button>
-
-                <p class="field-error" id="generate-error" hidden></p>
 
             </div>
 
@@ -143,32 +189,54 @@
     </section>
 
 
-    <!-- GENERATED CONTENT -->
+    <!-- =========================================================
+         GENERATED CONTENT
+         ========================================================= -->
+
     <section
         class="content-result card"
         id="content-result"
         hidden>
 
+        <!-- =====================================================
+             GENERATED CONTENT HEADER
+             ===================================================== -->
+
         <div class="content-result__header">
 
             <div>
-                <div class="eyebrow">Generated Draft</div>
 
-                <h2>Review Your Content</h2>
+                <div class="eyebrow">
+                    Generated Draft
+                </div>
+
+                <h2>
+                    Review Your Content
+                </h2>
 
                 <p>
-                    Review or edit the generated content before publishing.
+                    Review or edit the generated content before
+                    publishing.
                 </p>
+
             </div>
 
-            <span class="badge badge--draft" id="content-status">
+
+            <span
+                class="badge badge--draft"
+                id="content-status">
+
                 Draft
+
             </span>
 
         </div>
 
 
-        <!-- Generated content -->
+        <!-- =====================================================
+             GENERATED POST CONTENT
+             ===================================================== -->
+
         <div class="field-group">
 
             <label
@@ -179,20 +247,27 @@
 
             </label>
 
+
             <textarea
                 id="generated-content"
                 name="generated_content"
                 rows="14"
                 placeholder="Your generated content will appear here..."></textarea>
 
+
             <div class="field-meta">
 
                 <span>
-                    You can edit the generated content before publishing.
+
+                    You can edit the generated content before
+                    publishing.
+
                 </span>
 
                 <span id="generated-character-count">
+
                     0 characters
+
                 </span>
 
             </div>
@@ -200,32 +275,132 @@
         </div>
 
 
-        <!-- Actions -->
+        <!-- =====================================================
+             IMAGE PROMPT
+             
+             This section is hidden initially.
+             
+             app(1).js will automatically display it after:
+             
+             /generate_content
+                    ↓
+             content generation complete
+                    ↓
+             /generate_image_prompt
+                    ↓
+             image prompt returned
+             ===================================================== -->
+
+        <section
+            class="content-result"
+            id="image-prompt-section"
+            hidden>
+
+            <div class="content-result__header">
+
+                <div>
+
+                    <div class="eyebrow">
+                        Image Generation
+                    </div>
+
+                    <h3>
+                        Image Prompt
+                    </h3>
+
+                    <p>
+                        Use this prompt with your preferred
+                        AI image-generation tool.
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    id="copy-image-prompt"
+                    class="button button--secondary">
+
+                    Copy Prompt
+
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 IMAGE PROMPT TEXTAREA
+                 ================================================= -->
+
+            <div class="field-group">
+
+                <label
+                    for="image-prompt"
+                    class="form-label">
+
+                    Generated Image Prompt
+
+                </label>
+
+
+                <textarea
+                    id="image-prompt"
+                    name="image_prompt"
+                    rows="10"
+                    readonly
+                    placeholder="Your image-generation prompt will appear here..."></textarea>
+
+
+                <div
+                    class="field-meta">
+
+                    <span
+                        id="image-prompt-status"
+                        class="field-help"
+                        hidden>
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             CONTENT ACTIONS
+             ===================================================== -->
+
         <div class="content-result__actions">
+
+            <!-- Regenerate -->
 
             <button
                 type="button"
                 class="button button--secondary"
                 id="regenerate-content">
 
-                <span class="button-spinner" aria-hidden="true"></span>
-                <span class="button-label">Regenerate</span>
+                <span class="button-label">
+                    Regenerate
+                </span>
 
             </button>
 
+
+            <!-- Publish / Schedule -->
 
             <div class="content-result__publish-actions">
 
                 <button
                     type="button"
                     class="button button--secondary"
-                    id="schedule-content"
-                    aria-haspopup="dialog"
-                    aria-controls="schedule-modal">
+                    id="schedule-content">
 
                     Schedule for Later
 
                 </button>
+
 
                 <button
                     type="button"
@@ -241,117 +416,188 @@
         </div>
 
 
-        <p
-            id="publish-message"
+        <!-- =====================================================
+             GENERATION ERROR
+             ===================================================== -->
+
+        <div
+            id="generate-error"
             class="field-help"
             hidden>
-        </p>
+        </div>
 
     </section>
 
-</div>
 
-
-<div
-    class="schedule-modal"
-    id="schedule-modal"
-    hidden>
-
-    <div
-        class="schedule-modal__backdrop"
-        id="schedule-modal-backdrop"></div>
+    <!-- =========================================================
+         SCHEDULE MODAL
+         
+         The existing app(1).js expects these elements.
+         ========================================================= -->
 
     <div
-        class="schedule-modal__dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="schedule-modal-title">
+        id="schedule-modal"
+        class="schedule-modal"
+        hidden>
 
-        <div class="schedule-modal__header">
-
-            <h2 id="schedule-modal-title">Schedule for Later</h2>
-
-            <button
-                type="button"
-                class="schedule-modal__close"
-                id="schedule-modal-close"
-                aria-label="Close schedule picker">
-                &times;
-            </button>
-
+        <div
+            id="schedule-modal-backdrop"
+            class="schedule-modal__backdrop">
         </div>
 
-        <div class="schedule-modal__body">
 
-            <div class="schedule-picker__nav">
+        <div
+            class="schedule-modal__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="schedule-modal-title">
 
-                <button
-                    type="button"
-                    class="schedule-picker__nav-btn"
-                    id="schedule-prev-month"
-                    aria-label="Previous month">
-                    ‹
-                </button>
 
-                <div class="schedule-picker__period">
+            <!-- =================================================
+                 MODAL HEADER
+                 ================================================= -->
 
-                    <label class="visually-hidden" for="schedule-month">Month</label>
-                    <select id="schedule-month"></select>
+            <div class="schedule-modal__header">
 
-                    <label class="visually-hidden" for="schedule-year">Year</label>
-                    <select id="schedule-year"></select>
+                <div>
+
+                    <div class="eyebrow">
+                        Schedule Content
+                    </div>
+
+                    <h2 id="schedule-modal-title">
+                        Schedule Post
+                    </h2>
 
                 </div>
 
+
                 <button
                     type="button"
-                    class="schedule-picker__nav-btn"
-                    id="schedule-next-month"
-                    aria-label="Next month">
-                    ›
+                    id="schedule-modal-close"
+                    class="button button--secondary">
+
+                    Close
+
                 </button>
 
             </div>
 
-            <div class="schedule-picker__weekdays" aria-hidden="true">
-                <span>Sun</span>
-                <span>Mon</span>
-                <span>Tue</span>
-                <span>Wed</span>
-                <span>Thu</span>
-                <span>Fri</span>
-                <span>Sat</span>
+
+            <!-- =================================================
+                 DATE / TIME
+                 ================================================= -->
+
+            <div class="schedule-modal__body">
+
+                <div class="field-group">
+
+                    <label
+                        for="schedule-time"
+                        class="form-label">
+
+                        Time
+
+                    </label>
+
+                    <input
+                        type="time"
+                        id="schedule-time"
+                        name="schedule_time">
+
+                </div>
+
+
+                <!-- =============================================
+                     CALENDAR NAVIGATION
+                     ============================================= -->
+
+                <div class="schedule-picker">
+
+                    <div class="schedule-picker__controls">
+
+                        <button
+                            type="button"
+                            id="schedule-prev-month"
+                            class="button button--secondary">
+
+                            Previous
+
+                        </button>
+
+
+                        <div
+                            class="schedule-picker__period">
+
+                            <select
+                                id="schedule-month"
+                                aria-label="Schedule month">
+                            </select>
+
+
+                            <select
+                                id="schedule-year"
+                                aria-label="Schedule year">
+                            </select>
+
+                        </div>
+
+
+                        <button
+                            type="button"
+                            id="schedule-next-month"
+                            class="button button--secondary">
+
+                            Next
+
+                        </button>
+
+                    </div>
+
+
+                    <!-- =========================================
+                         CALENDAR
+                         ========================================= -->
+
+                    <div
+                        id="schedule-calendar"
+                        class="schedule-picker__calendar">
+                    </div>
+
+                </div>
+
+
+                <!-- =============================================
+                     SCHEDULE ERROR
+                     ============================================= -->
+
+                <div
+                    id="schedule-error"
+                    class="field-help"
+                    hidden>
+                </div>
+
             </div>
 
-            <div
-                class="schedule-picker__grid"
-                id="schedule-calendar"
-                role="grid"
-                aria-label="Choose a date"></div>
 
-            <label class="field-group schedule-picker__time">
-                <span>Time</span>
-                <input
-                    id="schedule-time"
-                    type="time"
-                    value="09:00">
-            </label>
+            <!-- =================================================
+                 MODAL FOOTER
+                 ================================================= -->
 
-            <p class="field-error" id="schedule-error" hidden></p>
+            <div class="schedule-modal__footer">
 
-        </div>
+                <button
+                    type="button"
+                    id="schedule-save"
+                    class="button button--primary">
 
-        <div class="schedule-modal__actions">
+                    <span class="button-label">
+                        Save
+                    </span>
 
-            <button
-                type="button"
-                class="button button--primary"
-                id="schedule-save">
+                </button>
 
-                <span class="button-spinner" aria-hidden="true"></span>
-                <span class="button-label">Save</span>
-
-            </button>
+            </div>
 
         </div>
 

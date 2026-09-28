@@ -8,13 +8,20 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 
-llm = ChatGoogleGenerativeAI(
-    model = 'gemini-3.6-flash',
-    temperature = 0.2,
-    api_key=GEMINI_API_KEY
-)
+# llm = ChatGoogleGenerativeAI(
+#     model = 'gemini-3.6-flash',
+#     temperature = 0.2,
+#     api_key=GEMINI_API_KEY
+# )
 
 embeddings = GoogleGenerativeAIEmbeddings(
     model="models/gemini-embedding-001",
     api_key=GEMINI_API_KEY,   # or set GEMINI_API_KEY env variable
 )
+
+from langchain_ollama import ChatOllama
+
+llm = ChatOllama(
+    model='llama3.2:latest',
+    temperature=0.2
+    )

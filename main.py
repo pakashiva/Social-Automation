@@ -10,6 +10,7 @@ from initialize_database.models import Account, PublishedPost, User, CompanyInfo
 from datetime import UTC, datetime, timedelta
 from cron_converter.cron_conversion import convert_to_cron
 from werkzeug.security import check_password_hash, generate_password_hash
+from agents.image_prompt_generator.functions import generate_image_prompt
 from flask import (
     Response , 
     flash,
@@ -163,28 +164,18 @@ def posts():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    print("🔥 LOGIN ROUTE HIT:", request.method, flush=True)
 
     if request.method == "POST":
 
         email = request.form.get("email", "").strip().lower()
 
-        print("🔥 LOGIN POST RECEIVED", flush=True)
-
-        print("🔥 EMAIL RECEIVED:", email, flush=True)
-
         password = request.form.get("password", "")
-        print("🔥 PASSWORD RECEIVED:", bool(password), flush=True)
-
-        print("🔥 ABOUT TO QUERY DATABASE", flush=True)
-
 
         user = User.query.filter_by(
             email=email
         ).first()
 
         if not user:
-            print("GOT THE USER DATA", flush=True)
 
             flash("Invalid credentials." , "error")
             return redirect(url_for("login"))
@@ -837,6 +828,83 @@ def publish_content():
 
         print(
             "Publish content error:",
+            repr(e)
+        )
+
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+# ==================================================
+# IMAGE GENERATOR PROMPT THROUGH LLM
+
+@app.before_request
+def debug_image_prompt_request():
+    if request.path == "/generate_image_prompt":
+        print(
+            ">>> BEFORE_REQUEST: /generate_image_prompt RECEIVED",
+            flush=True
+        )
+
+
+
+@app.route("/generate_image_prompt", methods=["POST"])
+def generate_image_prompt_route():
+    """
+    Generate an image-generation prompt from the final
+    social media post content.
+    """
+    print("IMAGE PROMPT ROUTE HIT")
+
+    
+    from model import llm
+
+    print("LLM")
+
+
+    try:
+
+        data = request.get_json(silent=True) or {}
+
+        content = data.get("content")
+        platform = data.get("platform")
+
+        if not content or not content.strip():
+            return jsonify({
+                "success": False,
+                "error": "Content is required."
+            }), 400
+
+        if not platform or not platform.strip():
+            return jsonify({
+                "success": False,
+                "error": "Platform is required."
+            }), 400
+
+        print("CALLING IMAGE PROMPT GENERATOR")
+
+        
+
+        image_prompt = generate_image_prompt(
+            llm=llm,
+            content=content,
+            platform=platform
+        )
+
+        print("IMAGE PROMPT GENERATED")
+        print("IMAGE PROMPT LENGTH:", len(image_prompt))
+
+
+        return jsonify({
+            "success": True,
+            "image_prompt": image_prompt
+        }), 200
+
+    except Exception as e:
+
+        print(
+            "Image prompt generation error:",
             repr(e)
         )
 
