@@ -1,6 +1,6 @@
-import os
-from dotenv import load_dotenv
+from services.meta_services import get_pages, get_instagram_business
 
-load_dotenv()
+pa = "EAAPHNyaB7HABSoppZBAOSG7mjRYgUumkAInioZCi86VnJ88w6uC76fiIzga5PNnHpmix4HfwGSJ8KvjFrju91n5zP4b2eiVkjZB2iHNOQZCIMzKFul2ZBjGHt7JEocGv3ZAaFy354AIVr4y34sN4cAElOGpoPoIZA6ouXLIIFBfzsKbDTZAy7B1ucN2stJvW8ICQ4oJDty5Pp2Wu3ZBf4ZAOOg"
+res = get_instagram_business(page_id=1298566816663471 , page_token=pa)
 
-print(os.getenv("DATABASE_URL"))
+print(res)

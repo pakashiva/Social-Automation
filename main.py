@@ -1,7 +1,8 @@
 import os ,json ,traceback
 from zoneinfo import ZoneInfo
 from app import app, db, jwt
-from uuid import uuid4
+from uuid import uuid4 
+import uuid
 from pathlib import Path
 from ruamel.yaml import YAML
 from dotenv import load_dotenv
@@ -10,6 +11,7 @@ from initialize_database.models import Account, PublishedPost, User, CompanyInfo
 from datetime import UTC, datetime, timedelta
 from cron_converter.cron_conversion import convert_to_cron
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 from agents.image_prompt_generator.functions import generate_image_prompt
 from flask import (
     Response , 
@@ -40,7 +42,6 @@ from services.linkedin_services import (
 
 from services.meta_services import (
     exchange_meta_token,
-    get_instagram_business,
     get_long_lived_token,
     get_pages,
     get_user_info,
@@ -97,6 +98,20 @@ def inject_auth_status():
             "logged_in": False
         }
 
+UPLOAD_FOLDER = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "static",
+    "uploads"
+)
+
+ALLOWED_IMAGE_EXTENSIONS = {
+    "png",
+    "jpg",
+    "jpeg",
+    "webp"
+}
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def render_page(template_name, title, active_page):
     return render_template(template_name, title=title, active_page=active_page)
@@ -419,14 +434,30 @@ def meta_callback():
 
     # Step 6: Retrieve the linked Instagram Business Account
     try:
-        instagram = get_instagram_business(page_id, page_token)
+        instagram = page.get("instagram_business_account")
+
     except RuntimeError as e:
         return str(e), 500
 
-    instagram_id = (
-        instagram["id"]
-        if instagram
-        else None
+    print(
+        "INSTAGRAM DATA FROM META:",
+        instagram
+    )
+
+    if not instagram:
+        return (
+        "No Instagram Business Account was found "
+        "for the selected Facebook Page.",
+        400
+    )
+
+
+    instagram_id = (instagram["id"])
+
+    print(
+        "INSTAGRAM BUSINESS ID:",
+        instagram_id,
+        flush=True
     )
 
     account = Account.query.filter_by(user_id=user_id).first()
@@ -769,22 +800,29 @@ def get_content_calendar():
 @jwt_required()
 def publish_content():
 
-    from publisher.publisher_functions import publish_to_facebook , publish_to_instagram , publish_to_linkedin
+    from publisher.publisher_functions import (
+        publish_to_facebook,
+        publish_to_instagram,
+        publish_to_linkedin
+    )
 
     user_id = get_jwt_identity()
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     content = data.get("content")
     platform = data.get("platform")
+    image_url = data.get("image_url")
 
     if not content:
         return jsonify({
+            "success": False,
             "error": "Content is required."
         }), 400
 
     if not platform:
         return jsonify({
+            "success": False,
             "error": "Platform is required."
         }), 400
 
@@ -801,28 +839,37 @@ def publish_content():
 
             publish_to_facebook(
                 message=content,
-                user_id=user_id
+                user_id=user_id,
+                image_url=image_url
             )
 
         elif platform == "instagram":
 
-            return jsonify({
-                "error":
-                    "Instagram publishing requires an image."
-            }), 400
+            if not image_url:
+                return jsonify({
+                    "success": False,
+                    "error": "Instagram publishing requires an image."
+                }), 400
+
+            publish_to_instagram(
+                message=content,
+                user_id=user_id,
+                image_url=image_url
+            )
 
         else:
 
             return jsonify({
-                "error":
-                    f"Unsupported platform: {platform}"
+                "success": False,
+                "error": f"Unsupported platform: {platform}"
             }), 400
 
         return jsonify({
             "success": True,
+            "image_url": image_url,
             "message":
                 f"Content published successfully to {platform.title()}."
-        })
+        }), 200
 
     except Exception as e:
 
@@ -838,15 +885,6 @@ def publish_content():
 
 # ==================================================
 # IMAGE GENERATOR PROMPT THROUGH LLM
-
-@app.before_request
-def debug_image_prompt_request():
-    if request.path == "/generate_image_prompt":
-        print(
-            ">>> BEFORE_REQUEST: /generate_image_prompt RECEIVED",
-            flush=True
-        )
-
 
 
 @app.route("/generate_image_prompt", methods=["POST"])
@@ -912,6 +950,82 @@ def generate_image_prompt_route():
             "success": False,
             "error": str(e)
         }), 500
+
+@app.route("/upload_image", methods=["POST"])
+def upload_image():
+    """
+    Upload an image to the server and return its public URL.
+    """
+
+    try:
+        if "image" not in request.files:
+            return jsonify({
+                "success": False,
+                "error": "No image file provided."
+            }), 400
+
+        image = request.files["image"]
+
+        if not image.filename:
+            return jsonify({
+                "success": False,
+                "error": "No image selected."
+            }), 400
+
+        original_filename = secure_filename(image.filename)
+
+        extension = (
+            original_filename.rsplit(".", 1)[1].lower()
+            if "." in original_filename
+            else ""
+        )
+
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            return jsonify({
+                "success": False,
+                "error": "Only PNG, JPG, JPEG and WEBP images are allowed."
+            }), 400
+
+        unique_filename = (
+            f"{uuid.uuid4().hex}.{extension}"
+        )
+
+        file_path = os.path.join(
+            UPLOAD_FOLDER,
+            unique_filename
+        )
+
+        image.save(file_path)
+
+        image_url = url_for(
+            "static",
+            filename=f"uploads/{unique_filename}",
+            _external=True
+        )
+
+        return jsonify({
+            "success": True,
+            "image_url": image_url,
+            "filename": unique_filename
+        }), 200
+
+    except Exception as e:
+        print("IMAGE UPLOAD ERROR:", repr(e))
+
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route("/uploads/<filename>")
+def uploaded_image(filename):
+
+    from flask import send_from_directory
+
+    return send_from_directory(
+        UPLOAD_FOLDER,
+        filename
+    )
 
 if __name__ == "__main__":
 

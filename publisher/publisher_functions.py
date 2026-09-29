@@ -5,13 +5,13 @@ from app import app, db
 
 LINKEDIN_VERSION = "202604"
 
-def publish_to_facebook(message , user_id):
+def publish_to_facebook(message , user_id, image_url=None):
 
     try:
         with app.app_context():
             account = Account.query.filter_by(user_id=user_id).first()
     except Exception as e:
-        print(str(e))
+        print(str(e))   
 
     PAGE_ACCESS_TOKEN = account.page_access_token
     PAGE_ID = account.page_id
@@ -29,39 +29,39 @@ def publish_to_facebook(message , user_id):
 
     try:
         print("Starting Facebook publishing...")
-        print("Message length:", len(message))
 
-        response = requests.post(
-            url,
-            data={
-                "message": message,
-                "access_token": PAGE_ACCESS_TOKEN,
-            },
-            timeout=60
-        )
+        if image_url:
+
+            url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/photos"
+
+            response = requests.post(
+                url,
+                data={
+                    "url": image_url,
+                    "caption": message,
+                    "access_token": PAGE_ACCESS_TOKEN,
+                },
+                timeout=60
+            )
+
+        else:
+
+            url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/feed"
+
+            response = requests.post(
+                url,
+                data={
+                    "message": message,
+                    "access_token": PAGE_ACCESS_TOKEN,
+                },
+                timeout=60
+            )
 
         print("Facebook Status Code:", response.status_code)
         print("Facebook Response:", response.text[:500])
 
+    except:
         response.raise_for_status()
-
-        published_post = PublishedPost(
-            user_id=user_id,
-            platform="Facebook",
-            post_content=message,
-        )
-
-        with app.app_context():
-            db.session.add(published_post)
-            db.session.commit()
-
-        print("Post saved to database successfully!")
-
-        return response.json()
-
-    except Exception as e:
-        print("FACEBOOK ERROR:", repr(e))
-        raise
 
 
 def publish_to_linkedin(message, user_id):

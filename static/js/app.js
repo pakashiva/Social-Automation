@@ -768,16 +768,19 @@ document.addEventListener('DOMContentLoaded', () => {
             async () => {
 
                 const contentSource =
-                    sourceSelect.value;
+                    sourceSelect
+                        ? sourceSelect.value
+                        : 'generate';
 
                 const userInput =
-                    input.value.trim();
+                    input
+                        ? input.value.trim()
+                        : '';
 
                 const platform =
                     platformSelect
                         ? platformSelect.value
                         : 'linkedin';
-
 
                 setGenerateError('');
 
@@ -1044,6 +1047,165 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
+        // ========================================================
+// IMAGE UPLOAD
+// ========================================================
+
+const uploadImage = async () => {
+
+    const imageInput =
+        document.getElementById(
+            'image-upload'
+        );
+
+    const status =
+        document.getElementById(
+            'image-upload-status'
+        );
+
+    const uploadButton =
+        document.getElementById(
+            'upload-image-button'
+        );
+
+    const preview =
+        document.getElementById(
+            'uploaded-image-preview'
+        );
+
+    const uploadedImage =
+        document.getElementById(
+            'uploaded-image'
+        );
+
+    const imageUrl =
+        document.getElementById(
+            'uploaded-image-url'
+        );
+
+
+    if (
+        !imageInput ||
+        !imageInput.files ||
+        imageInput.files.length === 0
+    ) {
+
+        if (status) {
+            status.textContent =
+                'Please select an image.';
+        }
+
+        return;
+    }
+
+
+    const file =
+        imageInput.files[0];
+
+
+    const formData =
+        new FormData();
+
+    formData.append(
+        'image',
+        file
+    );
+
+
+    if (uploadButton) {
+        uploadButton.disabled = true;
+    }
+
+
+    if (status) {
+        status.textContent =
+            'Uploading image...';
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                '/upload_image',
+                {
+                    method: 'POST',
+                    body: formData
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            throw new Error(
+                data.error ||
+                'Image upload failed.'
+            );
+        }
+
+        window.uploadedImageUrl = data.image_url;
+
+        if (uploadedImage) {
+            uploadedImage.src =
+                data.image_url;
+        }
+
+
+        if (imageUrl) {
+            imageUrl.value =
+                data.image_url;
+        }
+
+
+        if (preview) {
+            preview.style.display =
+                'block';
+        }
+
+
+        if (status) {
+            status.textContent =
+                'Image uploaded successfully.';
+        }
+
+
+        console.log(
+            'IMAGE UPLOADED:',
+            data.image_url
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            'IMAGE UPLOAD ERROR:',
+            error
+        );
+
+
+        if (status) {
+            status.textContent =
+                error.message ||
+                'Image upload failed.';
+        }
+
+
+    } finally {
+
+        if (uploadButton) {
+            uploadButton.disabled =
+                false;
+        }
+    }
+};
+
 
         // ========================================================
         // COPY IMAGE PROMPT
@@ -1104,10 +1266,72 @@ document.addEventListener('DOMContentLoaded', () => {
         // EVENT LISTENERS
         // ========================================================
 
+        const uploadImageButton =
+                document.getElementById(
+                    'upload-image-button'
+                );
+
+            if (uploadImageButton) {
+
+                uploadImageButton.addEventListener(
+                    'click',
+                    uploadImage
+                );
+            }
         sourceSelect.addEventListener(
             'change',
             updateSourceUI
         );
+
+        const copyImageUrlButton =
+    document.getElementById(
+        'copy-image-url'
+    );
+
+if (copyImageUrlButton) {
+
+    copyImageUrlButton.addEventListener(
+        'click',
+        async () => {
+
+            const imageUrl =
+                document.getElementById(
+                    'uploaded-image-url'
+                );
+
+            if (
+                !imageUrl ||
+                !imageUrl.value
+            ) {
+                return;
+            }
+
+            try {
+
+                await navigator.clipboard.writeText(
+                    imageUrl.value
+                );
+
+                copyImageUrlButton.textContent =
+                    'Copied!';
+
+                setTimeout(() => {
+
+                    copyImageUrlButton.textContent =
+                        'Copy URL';
+
+                }, 1500);
+
+            } catch (error) {
+
+                console.error(
+                    'COPY IMAGE URL ERROR:',
+                    error
+                );
+            }
+        }
+    );
+}
 
 
         input.addEventListener(
@@ -1142,6 +1366,177 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateSourceUI();
     }
+
+    // ============================================================
+// PUBLISH NOW
+// ============================================================
+
+const publishContentButton = document.getElementById("publish-content");
+
+if (publishContentButton) {
+
+    publishContentButton.addEventListener("click", async function () {
+
+        console.log("PUBLISH NOW CLICKED");
+
+        try {
+
+            // --------------------------------------------------
+            // Get generated content
+            // --------------------------------------------------
+
+            const content = generatedContent
+                ? generatedContent.value.trim()
+                : "";
+
+            if (!content) {
+
+                alert("Please generate content before publishing.");
+
+                return;
+            }
+
+
+            // --------------------------------------------------
+            // Get selected platform
+            // --------------------------------------------------
+
+            const platform = platformSelect
+                ? platformSelect.value
+                : "";
+
+            console.log("================================");
+            console.log("CURRENT PUBLISH CODE IS RUNNING");
+            console.log("platformSelect:", platformSelect);
+            console.log("platform value:", platform);
+            console.log("sourceSelect:", sourceSelect);
+
+            if (!platform) {
+
+                alert("Please select a platform.");
+
+                return;
+            }
+
+
+            // --------------------------------------------------
+            // Get uploaded image URL
+            // --------------------------------------------------
+
+            let imageUrl = null;
+
+            if (window.uploadedImageUrl) {
+                imageUrl = window.uploadedImageUrl;
+            }
+
+
+            console.log("Publishing data:");
+            console.log("Platform:", platform);
+            console.log("Image URL:", imageUrl);
+
+
+            // --------------------------------------------------
+            // Disable button while publishing
+            // --------------------------------------------------
+
+            publishContentButton.disabled = true;
+
+            const originalText =
+                publishContentButton.textContent;
+
+            publishContentButton.textContent =
+                "Publishing...";
+
+
+            // --------------------------------------------------
+            // Send publish request
+            // --------------------------------------------------
+
+            const response = await fetch(
+                "/api/publish-content",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    credentials: "same-origin",
+
+                    body: JSON.stringify({
+                        content: content,
+                        platform: platform,
+                        image_url: imageUrl
+                    })
+                }
+            );
+
+
+            // --------------------------------------------------
+            // Read response
+            // --------------------------------------------------
+
+            const responseText = await response.text();
+
+            let data;
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                throw new Error(
+                    `Server returned non-JSON response (${response.status}): ${responseText.substring(0, 500)}`
+                );
+            }
+
+            console.log(
+                "PUBLISH RESPONSE:",
+                data
+            );
+
+
+            if (!response.ok || !data.success) {
+
+                throw new Error(
+                    data.error ||
+                    "Publishing failed."
+                );
+            }
+
+
+            // --------------------------------------------------
+            // Success
+            // --------------------------------------------------
+
+            alert(
+                data.message ||
+                "Content published successfully."
+            );
+
+        }
+        catch (error) {
+
+            console.error(
+                "PUBLISH ERROR:",
+                error
+            );
+
+            alert(
+                error.message ||
+                "Failed to publish content."
+            );
+
+        }
+        finally {
+
+            publishContentButton.disabled = false;
+
+            publishContentButton.textContent =
+                "Publish Now";
+        }
+
+    });
+
+}
 
 
     // ============================================================

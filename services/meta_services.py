@@ -34,7 +34,8 @@ def meta_login():
             "pages_manage_engagement",
             "pages_read_engagement",
             "pages_read_user_content",
-            "public_profile"
+            "public_profile",
+            "instagram_basic"
         ])
     }
 
@@ -131,34 +132,105 @@ def get_user_info(access_token):
 
     return response.json()
 
-def get_pages(access_token):
-
-    url = "https://graph.facebook.com/v23.0/me/accounts"
-
-    params = {
-        "access_token": access_token
-    }
-
-    response = requests.get(url, params=params)
-
-    if response.status_code != 200:
-        raise RuntimeError(response.text)
-
-    return response.json()["data"]
-
 def get_instagram_business(page_id, page_token):
 
     url = f"https://graph.facebook.com/v23.0/{page_id}"
 
     params = {
-        "fields": "instagram_business_account",
+        "fields": "instagram_business_account{id,username}",
         "access_token": page_token
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(
+        url,
+        params=params
+    )
+
+    print("======================================", flush=True)
+    print("INSTAGRAM BUSINESS ACCOUNT LOOKUP", flush=True)
+    print("PAGE ID:", page_id, flush=True)
+    print("STATUS:", response.status_code, flush=True)
+
+    try:
+        data = response.json()
+
+        print(
+            "INSTAGRAM ACCOUNT:",
+            data.get("instagram_business_account"),
+            flush=True
+        )
+
+        if "error" in data:
+            print(
+                "META ERROR:",
+                data["error"],
+                flush=True
+            )
+
+    except Exception:
+        print(
+            "RESPONSE:",
+            response.text,
+            flush=True
+        )
+
+    print("======================================", flush=True)
 
     if response.status_code != 200:
         raise RuntimeError(response.text)
 
-    return response.json().get("instagram_business_account")
+    data = response.json()
 
+    return data.get("instagram_business_account")
+
+def get_pages(access_token):
+
+    url = "https://graph.facebook.com/v23.0/me/accounts"
+
+    params = {
+        "fields": "id,name,access_token,instagram_business_account",
+        "access_token": access_token
+    }
+
+    response = requests.get(
+        url,
+        params=params
+    )
+
+    print("======================================", flush=True)
+    print("FACEBOOK PAGES RESPONSE", flush=True)
+    print("STATUS:", response.status_code, flush=True)
+
+    # DO NOT print access tokens
+    try:
+        data = response.json()
+
+        safe_data = []
+
+        for page in data.get("data", []):
+            safe_data.append({
+                "id": page.get("id"),
+                "name": page.get("name"),
+                "instagram_business_account":
+                    page.get("instagram_business_account")
+            })
+
+        print(
+            "PAGES:",
+            safe_data,
+            flush=True
+        )
+
+    except Exception:
+        print(
+            "RESPONSE:",
+            response.text,
+            flush=True
+        )
+
+    print("======================================", flush=True)
+
+    if response.status_code != 200:
+        raise RuntimeError(response.text)
+
+    return response.json()["data"]
