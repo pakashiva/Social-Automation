@@ -1,97 +1,129 @@
-# import os , cloudinary , cloudinary.uploader
-# from dotenv import load_dotenv
-# from langchain_google_genai import ChatGoogleGenerativeAI
-# from langchain_core.messages import SystemMessage , HumanMessage
-# from agents.image_generator_agent.image_generate_prompt import (SYSTEM_PROMPT_FOR_DECISION ,
-#                                                                  SYSTEM_PROMPT_FOR_GENERATION)
-# from agents.image_generator_agent.prompt_output import ImageDecision
+"""
+Image generation functions.
 
-# load_dotenv()
+Generates images using Hugging Face Inference API
+and stores them in the scheduled uploads directory.
+"""
 
-# cloudinary.config(
-#     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-#     api_key=os.getenv("CLOUDINARY_API_KEY"),
-#     api_secret=os.getenv("CLOUDINARY_API_SECRET"),
-#     secure=True
-# )
-
-# decision_llm = ChatGoogleGenerativeAI(
-#     model="gemini-2.5-flash",
-#     temperature=0
-# )
-
-# image_llm = ChatGoogleGenerativeAI(
-#     model="gemini-2.5-flash-image",
-#     temperature=0
-# )
-
-# def generate_image_decision(topic , pillar , post):
-
-#     messages = [
-#         SystemMessage(content=SYSTEM_PROMPT_FOR_DECISION),
-#         HumanMessage(content= f"""
-# Topic:
-# {topic}
-
-# Pillar:
-# {pillar}
-
-# Social Media post:
-# {post}
-
-# """)
-#     ]
-
-#     structured_llm = decision_llm.with_structured_output(ImageDecision)
-#     response = structured_llm.invoke(messages)
-
-#     return response
+import os
+import uuid
+from pathlib import Path
+from dotenv import load_dotenv
+from huggingface_hub import InferenceClient
 
 
-# def get_public_url(image_bytes):
-#     try:
-#         result = cloudinary.uploader.upload(
-#         image_bytes,
-#         resource_type="image"
-#         )
-#         return result['secure_url']
-    
-#     except Exception as e:
-#         return str(e)
-
-# def get_image(topic , pillar , post):
-
-#     response = generate_image_decision(topic=topic , pillar=pillar , post=post)
-#     prompt = response.image_prompt
-#     reason = response.reason
-#     generate_image = response.generate_image
-
-#     if generate_image and not prompt:
-#         raise ValueError("Model decided to generate an image but returned no image_prompt.")
-
-#     if generate_image:
-
-#         messages = [
-#             SystemMessage(content=SYSTEM_PROMPT_FOR_GENERATION),
-#             HumanMessage(content=prompt)
-#         ]
-
-#         response = image_llm.invoke(messages)
-#         image_bytes = response.content
-#         url = get_public_url(image_bytes=image_bytes)
-#         return {
-#         "generate_image": True,
-#         "url": url,
-#         "reason": reason,
-#     }
-
-#     else:
-#         return {
-#         "generate_image": False,
-#         "url": None,
-#         "reason": reason,
-#     } 
+load_dotenv()
 
 
+# ---------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+SCHEDULED_UPLOAD_FOLDER = os.path.join(
+    BASE_DIR,
+    "static",
+    "scheduled_uploads"
+)
 
 
+os.makedirs(
+    SCHEDULED_UPLOAD_FOLDER,
+    exist_ok=True
+)
+
+
+# ---------------------------------------------------------
+# Hugging Face Client
+# ---------------------------------------------------------
+
+client = InferenceClient(
+    provider="fal-ai",
+    api_key=os.environ["HF_TOKEN"],
+)
+
+
+# ---------------------------------------------------------
+# Image Generator
+# ---------------------------------------------------------
+
+def generate_image(
+    prompt: str,
+    user_id
+) -> dict:
+    """
+    Generate an image using Hugging Face and save it locally.
+
+    Parameters
+    ----------
+    prompt:
+        Image generation prompt.
+
+    user_id:
+        ID of the user for whom the image is generated.
+
+    Returns
+    -------
+    dict
+        Information about the generated image.
+    """
+
+    if not prompt or not prompt.strip():
+        raise ValueError(
+            "Image generation prompt is required."
+        )
+
+    if not user_id:
+        raise ValueError(
+            "User ID is required."
+        )
+
+    prompt = prompt.strip()
+
+    # -----------------------------------------------------
+    # Generate image
+    # -----------------------------------------------------
+
+    image = client.text_to_image(
+        prompt=prompt,
+        model="stabilityai/stable-diffusion-xl-base-1.0",
+    )
+
+    # -----------------------------------------------------
+    # Generate unique filename
+    # -----------------------------------------------------
+
+    filename = (
+        f"{uuid.uuid4().hex}.png"
+    )
+
+    # -----------------------------------------------------
+    # Full local file path
+    # -----------------------------------------------------
+
+    file_path = os.path.join(
+        SCHEDULED_UPLOAD_FOLDER,
+        filename
+    )
+
+    # -----------------------------------------------------
+    # Save image
+    # -----------------------------------------------------
+
+    image.save(file_path)
+
+    print(
+        "IMAGE GENERATED:",
+        flush=True
+    )
+
+    # -----------------------------------------------------
+    # Return image information
+    # -----------------------------------------------------
+
+    return {
+        "user_id": user_id,
+        "filename": filename,
+        "file_path": str(file_path)
+    }

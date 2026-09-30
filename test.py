@@ -1,6 +1,19 @@
-from services.meta_services import get_pages, get_instagram_business
+import os
+from huggingface_hub import InferenceClient
+from dotenv import load_dotenv
 
-pa = "EAAPHNyaB7HABSoppZBAOSG7mjRYgUumkAInioZCi86VnJ88w6uC76fiIzga5PNnHpmix4HfwGSJ8KvjFrju91n5zP4b2eiVkjZB2iHNOQZCIMzKFul2ZBjGHt7JEocGv3ZAaFy354AIVr4y34sN4cAElOGpoPoIZA6ouXLIIFBfzsKbDTZAy7B1ucN2stJvW8ICQ4oJDty5Pp2Wu3ZBf4ZAOOg"
-res = get_instagram_business(page_id=1298566816663471 , page_token=pa)
+load_dotenv()
 
-print(res)
+client = InferenceClient(
+    provider="fal-ai",
+    api_key=os.environ["HF_TOKEN"],
+)
+
+# output is a PIL.Image object
+image = client.text_to_image(
+    "Astronaut riding a horse",
+    model="stabilityai/stable-diffusion-xl-base-1.0",
+)
+image.save("generated.png")
+
+print("Image saved successfully!")

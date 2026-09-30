@@ -1,8 +1,13 @@
 from datetime import datetime, UTC, timedelta
 from zoneinfo import ZoneInfo
 import traceback
+from pathlib import Path
+import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from croniter import croniter
+
+from agents.image_prompt_generator.functions import generate_image_prompt
+from agents.image_generator_agent.image_generate_functions import generate_image
 
 from app import app, db
 
@@ -35,6 +40,18 @@ K = 3
 
 # How often APScheduler checks for work.
 CHECK_INTERVAL_SECONDS = 60
+
+# Folder where AI-generated scheduled images are stored.
+BASE_DIR = Path(__file__).resolve().parent
+
+SCHEDULED_UPLOAD_FOLDER = (
+    BASE_DIR / "static" / "scheduled_uploads"
+)
+
+SCHEDULED_UPLOAD_FOLDER.mkdir(
+    parents=True,
+    exist_ok=True
+)
 
 
 # ============================================================
@@ -147,14 +164,19 @@ def get_next_schedule(company, after_utc=None):
 
 def create_recurring_post(company, scheduled_at, platform):
     """
-    Generate one platform-specific post
-    and save it into RecurringContent.
+    Generate one platform-specific recurring post,
+    generate its image, save the image, and store
+    the image information in RecurringContent.
     """
 
     print(
         f"Generating {platform} content "
         f"for user {company.user_id}"
     )
+
+    # --------------------------------------------------------
+    # 1. Generate social media content
+    # --------------------------------------------------------
 
     content = generate_content(
         user_id=company.user_id,
@@ -166,20 +188,101 @@ def create_recurring_post(company, scheduled_at, platform):
             f"Generated content is empty for {platform}"
         )
 
+    # --------------------------------------------------------
+    # 2. Generate image-generation prompt
+    # --------------------------------------------------------
+
+    print(
+        f"Generating image prompt for recurring post "
+        f"for user {company.user_id}"
+    )
+
+    image_prompt = generate_image_prompt(
+        content=content,
+        platform=platform
+    )
+
+    if not image_prompt:
+        raise ValueError(
+            "Image prompt generation returned empty prompt."
+        )
+
+    # --------------------------------------------------------
+    # 3. Generate image using Hugging Face
+    # --------------------------------------------------------
+
+    print(
+        f"Generating image for recurring post "
+        f"for user {company.user_id}"
+    )
+
+    image_data = generate_image(
+        prompt=image_prompt,
+        user_id=company.user_id
+    )
+
+    if not image_data:
+        raise ValueError(
+            "Image generation returned no data."
+        )
+
+    image_filename = image_data["filename"]
+    image_path = image_data["file_path"]
+
+    # --------------------------------------------------------
+    # 4. Create database record
+    # --------------------------------------------------------
+
     recurring_post = RecurringContent(
         user_id=company.user_id,
         platform=platform,
         scheduled_at=scheduled_at,
         post_content=content,
-        status="scheduled"
+        status="scheduled",
+
+        image_prompt=image_prompt,
+        image_filename=image_filename,
+        image_path=image_path,
+        image_status="generated"
     )
 
-    db.session.add(recurring_post)
-    db.session.commit()
+    try:
+
+        db.session.add(recurring_post)
+        db.session.commit()
+
+    except Exception:
+
+        db.session.rollback()
+
+        # If database save fails, remove the generated image
+        # so we do not leave an orphaned file.
+
+        if image_path and os.path.exists(image_path):
+
+            try:
+                os.remove(image_path)
+
+                print(
+                    f"Deleted orphaned image: {image_path}"
+                )
+
+            except OSError as delete_error:
+
+                print(
+                    "Failed to delete orphaned image:",
+                    repr(delete_error)
+                )
+
+        raise
 
     print(
         f"Recurring {platform} post created for "
         f"{scheduled_at}"
+    )
+
+    print(
+        f"Image generated: {image_filename}"
     )
 
     return recurring_post
@@ -353,7 +456,9 @@ def maintain_all_recurring_posts():
 def publish_due_recurring_posts():
     """
     Publish recurring posts whose scheduled time has arrived.
-    Uses the publisher belonging to the post's platform.
+
+    Uses the previously generated image associated with
+    the recurring post.
     """
 
     now_utc = datetime.now(UTC)
@@ -374,14 +479,72 @@ def publish_due_recurring_posts():
 
         try:
 
+            # ------------------------------------------------
+            # Mark as publishing first
+            # ------------------------------------------------
+
             post.status = "publishing"
             db.session.commit()
+
+            # ------------------------------------------------
+            # Build public image URL
+            # ------------------------------------------------
+
+            image_url = None
+
+            if post.image_filename:
+
+                public_base_url = os.getenv(
+                    "PUBLIC_BASE_URL"
+                )
+
+                if not public_base_url:
+                    raise ValueError(
+                        "PUBLIC_BASE_URL is not configured."
+                    )
+
+                public_base_url = (
+                    public_base_url.rstrip("/")
+                )
+
+                image_url = (
+                    f"{public_base_url}/static/"
+                    f"scheduled_uploads/"
+                    f"{post.image_filename}"
+                )
+
+            print(
+                f"Publishing recurring post {post.id}"
+            )
+
+            print(
+                f"Image URL: {image_url}"
+            )
+
+            # ------------------------------------------------
+            # Publish according to platform
+            # ------------------------------------------------
 
             if post.platform == "facebook":
 
                 publish_to_facebook(
                     message=post.post_content,
-                    user_id=post.user_id
+                    user_id=post.user_id,
+                    image_url=image_url
+                )
+
+            elif post.platform == "instagram":
+
+                if not image_url:
+                    raise ValueError(
+                        "Instagram recurring post requires "
+                        "an image."
+                    )
+
+                publish_to_instagram(
+                    message=post.post_content,
+                    user_id=post.user_id,
+                    image_url=image_url
                 )
 
             elif post.platform == "linkedin":
@@ -391,41 +554,73 @@ def publish_due_recurring_posts():
                     user_id=post.user_id
                 )
 
-            elif post.platform == "instagram":
-
-                publish_to_instagram(
-                    message=post.post_content,
-                    user_id=post.user_id
-                )
-
             else:
 
                 raise ValueError(
-                    f"Unsupported platform: "
-                    f"{post.platform}"
+                    f"Unsupported platform: {post.platform}"
                 )
 
+            # ------------------------------------------------
+            # Publishing succeeded
+            # ------------------------------------------------
+
             post.status = "published"
+
             db.session.commit()
 
+            # ------------------------------------------------
+            # Delete generated image AFTER successful publish
+            # ------------------------------------------------
+
+            if post.image_path:
+
+                if os.path.exists(post.image_path):
+
+                    try:
+
+                        os.remove(post.image_path)
+
+                        print(
+                            f"IMAGE DELETED: "
+                            f"{post.image_path}"
+                        )
+
+                    except OSError as delete_error:
+
+                        print(
+                            "IMAGE DELETE ERROR:",
+                            repr(delete_error)
+                        )
+
+                else:
+
+                    print(
+                        f"IMAGE NOT FOUND: "
+                        f"{post.image_path}"
+                    )
+
             print(
-                f"Recurring {post.platform} post "
-                f"{post.id} published."
+                f"Recurring post {post.id} published."
             )
 
         except Exception as e:
 
             db.session.rollback()
 
-            post.status = "failed"
-            db.session.commit()
+            try:
+
+                post.status = "failed"
+
+                db.session.commit()
+
+            except Exception:
+
+                db.session.rollback()
 
             print(
-                f"Recurring {post.platform} post "
-                f"{post.id} failed: {e}"
+                f"Recurring post {post.id} failed: {e}"
             )
 
-            traceback.print_exc()
 # ============================================================
 # 7. PUBLISH CUSTOM CONTENT JOBS
 # ============================================================

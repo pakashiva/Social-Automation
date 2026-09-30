@@ -751,47 +751,59 @@ def get_content_calendar():
     user_id = get_jwt_identity()
 
     recurring_posts = RecurringContent.query.filter(
-            RecurringContent.user_id == user_id,
-            RecurringContent.status == "scheduled"
-        ).all()
+        RecurringContent.user_id == user_id,
+        RecurringContent.status == "scheduled"
+    ).all()
 
     custom_posts = ContentJob.query.filter(
-            ContentJob.user_id == user_id,
-            ContentJob.status == "scheduled"
-        ).all()
+        ContentJob.user_id == user_id,
+        ContentJob.status == "scheduled"
+    ).all()
 
     events = []
 
-        # Recurring posts
+    # Recurring posts
     for post in recurring_posts:
+
+        image_url = None
+
+        if post.image_filename:
+            image_url = url_for(
+                "static",
+                filename=f"scheduled_uploads/{post.image_filename}",
+                _external=True
+            )
+
         events.append({
-                "id": f"recurring-{post.id}",
-                "title": post.post_content[:50],
-                "start": post.scheduled_at.isoformat(),
-                "extendedProps": {
-                    "status": post.status,
-                    "platform": post.platform,
-                    "post_content": post.post_content
-                }
-            })
+            "id": f"recurring-{post.id}",
+            "title": post.post_content[:50],
+            "start": post.scheduled_at.isoformat(),
+            "extendedProps": {
+                "status": post.status,
+                "platform": post.platform,
+                "post_content": post.post_content,
+                "image_url": image_url
+            }
+        })
 
-        # Custom posts
+    # Custom posts
     for post in custom_posts:
-            events.append({
-                "id": f"custom-{post.id}",
-                "title": post.post_content[:50],
-                "start": post.scheduled_at.isoformat(),
-                "extendedProps": {
-                    "status": post.status,
-                    "platform": post.platform,
-                    "post_content": post.post_content
-                }
-            })
 
-        # Earliest scheduled content first
+        events.append({
+            "id": f"custom-{post.id}",
+            "title": post.post_content[:50],
+            "start": post.scheduled_at.isoformat(),
+            "extendedProps": {
+                "status": post.status,
+                "platform": post.platform,
+                "post_content": post.post_content
+            }
+        })
+
+    # Earliest scheduled content first
     events.sort(
-            key=lambda event: event["start"]
-        )
+        key=lambda event: event["start"]
+    )
 
     return jsonify(events)
 
@@ -957,7 +969,6 @@ def generate_image_prompt_route():
         
 
         image_prompt = generate_image_prompt(
-            llm=llm,
             content=content,
             platform=platform
         )

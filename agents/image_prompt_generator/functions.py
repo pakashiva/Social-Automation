@@ -10,10 +10,9 @@ from agents.image_prompt_generator.prompt import (
     IMAGE_PROMPT_SYSTEM,
     IMAGE_PROMPT_USER,
 )
-
+from model import llm
 
 def generate_image_prompt(
-    llm,
     content: str,
     platform: str,
 ) -> str:
@@ -81,6 +80,4 @@ def generate_image_prompt(
             "The LLM returned an empty image prompt."
         )
 
-    print(image_prompt)
-    
     return image_prompt

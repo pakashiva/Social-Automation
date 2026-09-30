@@ -264,6 +264,11 @@ class RecurringContent(db.Model):
         default="scheduled"
     )
 
+    image_prompt = db.Column(db.Text, nullable=True)
+    image_filename = db.Column(db.String(255), nullable=True)
+    image_path = db.Column(db.String(500), nullable=True)
+    image_status = db.Column(db.String(50), nullable=True)
+
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,

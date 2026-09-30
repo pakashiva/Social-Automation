@@ -2486,7 +2486,6 @@ if (publishContentButton) {
 // ================================================================
 // CONTENT CALENDAR
 // ================================================================
-
 async function loadCalendar() {
 
     const response =
@@ -2501,7 +2500,7 @@ async function loadCalendar() {
 
     const calendarEl =
         document.getElementById(
-            "calendar"
+            "content-calendar"
         );
 
 
@@ -2526,7 +2525,7 @@ async function loadCalendar() {
                             event.extendedProps;
 
 
-                        alert(
+                        let message =
 
                             "Date: " +
                             event.start.toLocaleDateString() +
@@ -2540,9 +2539,19 @@ async function loadCalendar() {
                             "\nStatus: " +
                             props.status +
 
+                            "\nIMAGE URL:\n" +
+                            (props.image_url || "No image URL") +
+                        
+                            "\n\n--------------------\n\n" +
+
                             "\n\nContent:\n" +
-                            props.post_content
-                        );
+                            props.post_content;
+
+
+                        
+
+
+                        alert(message);
                     }
             }
         );
