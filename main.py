@@ -813,6 +813,8 @@ def publish_content():
     content = data.get("content")
     platform = data.get("platform")
     image_url = data.get("image_url")
+    image_filename = data.get("image_filename")
+
 
     if not content:
         return jsonify({
@@ -863,6 +865,36 @@ def publish_content():
                 "success": False,
                 "error": f"Unsupported platform: {platform}"
             }), 400
+
+        # Deleting the file after upload.
+
+        image_file_path = None
+
+        print(image_filename)
+        if image_filename:
+            image_file_path = os.path.join(
+            UPLOAD_FOLDER,
+            image_filename
+            )
+
+            print(image_file_path)
+
+            if image_file_path and os.path.exists(image_file_path):
+                print("TRUE, entered the if statement.")
+
+                try:
+                    os.remove(image_file_path)
+                    print(
+                        "IMAGE DELETED:",
+                        image_file_path,
+                        flush=True)
+                except OSError as e:
+                    print(
+                        "IMAGE DELETE ERROR:",
+                        repr(e),
+                        flush=True
+                    )
+
 
         return jsonify({
             "success": True,

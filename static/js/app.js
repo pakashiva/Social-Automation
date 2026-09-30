@@ -1151,6 +1151,7 @@ const uploadImage = async () => {
         }
 
         window.uploadedImageUrl = data.image_url;
+        window.uploadedImageFilename = data.filename;
 
         if (uploadedImage) {
             uploadedImage.src =
@@ -1466,7 +1467,9 @@ if (publishContentButton) {
                     body: JSON.stringify({
                         content: content,
                         platform: platform,
-                        image_url: imageUrl
+                        image_url: imageUrl,
+                        image_filename: window.uploadedImageFilename
+
                     })
                 }
             );
@@ -1511,6 +1514,7 @@ if (publishContentButton) {
                 data.message ||
                 "Content published successfully."
             );
+
 
         }
         catch (error) {
