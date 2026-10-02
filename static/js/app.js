@@ -1052,159 +1052,103 @@ document.addEventListener('DOMContentLoaded', () => {
 // ========================================================
 
 const uploadImage = async () => {
+    const imageInput = document.getElementById('image-upload');
+    const status = document.getElementById('image-upload-status');
+    const uploadButton = document.getElementById('upload-image-button');
 
-    const imageInput =
-        document.getElementById(
-            'image-upload'
-        );
-
-    const status =
-        document.getElementById(
-            'image-upload-status'
-        );
-
-    const uploadButton =
-        document.getElementById(
-            'upload-image-button'
-        );
-
-    const preview =
-        document.getElementById(
-            'uploaded-image-preview'
-        );
-
-    const uploadedImage =
-        document.getElementById(
-            'uploaded-image'
-        );
-
-    const imageUrl =
-        document.getElementById(
-            'uploaded-image-url'
-        );
-
-
-    if (
-        !imageInput ||
-        !imageInput.files ||
-        imageInput.files.length === 0
-    ) {
-
-        if (status) {
-            status.textContent =
-                'Please select an image.';
-        }
-
+    if (!imageInput?.files?.length) {
+        status.textContent = 'Choose one or more photos first.';
         return;
     }
 
-
-    const file =
-        imageInput.files[0];
-
-
-    const formData =
-        new FormData();
-
-    formData.append(
-        'image',
-        file
-    );
-
-
-    if (uploadButton) {
-        uploadButton.disabled = true;
+    const selectedFiles = Array.from(imageInput.files);
+    const totalAfterUpload = (window.uploadedImages || []).length + selectedFiles.length;
+    if (totalAfterUpload > 10) {
+        status.textContent = 'You can add up to 10 photos per post.';
+        return;
     }
 
-
-    if (status) {
-        status.textContent =
-            'Uploading image...';
+    if (platformSelect?.value === 'instagram' && selectedFiles.some((file) => !/\.jpe?g$/i.test(file.name))) {
+        status.textContent = 'Instagram carousel photos must be JPG or JPEG. Choose JPG images for this post.';
+        return;
     }
 
+    const formData = new FormData();
+    selectedFiles.forEach((file) => formData.append('images', file));
+    uploadButton.disabled = true;
+    status.textContent = `Uploading ${selectedFiles.length} photo${selectedFiles.length === 1 ? '' : 's'}…`;
 
     try {
-
-        const response =
-            await fetch(
-                '/upload_image',
-                {
-                    method: 'POST',
-                    body: formData
-                }
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (
-            !response.ok ||
-            !data.success
-        ) {
-
-            throw new Error(
-                data.error ||
-                'Image upload failed.'
-            );
+        const response = await fetch('/upload_image', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Photo upload failed.');
         }
 
-        window.uploadedImageUrl = data.image_url;
-        window.uploadedImageFilename = data.filename;
-
-        if (uploadedImage) {
-            uploadedImage.src =
-                data.image_url;
-        }
-
-
-        if (imageUrl) {
-            imageUrl.value =
-                data.image_url;
-        }
-
-
-        if (preview) {
-            preview.style.display =
-                'block';
-        }
-
-
-        if (status) {
-            status.textContent =
-                'Image uploaded successfully.';
-        }
-
-
-        console.log(
-            'IMAGE UPLOADED:',
-            data.image_url
-        );
-
-
+        window.uploadedImages = [
+            ...(window.uploadedImages || []),
+            ...data.images
+        ];
+        imageInput.value = '';
+        renderUploadedImages();
+        status.textContent = `${data.images.length} photo${data.images.length === 1 ? '' : 's'} uploaded.`;
     } catch (error) {
-
-        console.error(
-            'IMAGE UPLOAD ERROR:',
-            error
-        );
-
-
-        if (status) {
-            status.textContent =
-                error.message ||
-                'Image upload failed.';
-        }
-
-
+        status.textContent = error.message || 'Photo upload failed.';
     } finally {
-
-        if (uploadButton) {
-            uploadButton.disabled =
-                false;
-        }
+        uploadButton.disabled = false;
     }
+};
+
+const renderUploadedImages = () => {
+    const preview = document.getElementById('uploaded-images-preview');
+    const count = document.getElementById('uploaded-image-count');
+    const images = window.uploadedImages || [];
+    if (!preview || !count) return;
+
+    preview.replaceChildren();
+    count.textContent = `${images.length} of 10`;
+
+    images.forEach((image, index) => {
+        const item = document.createElement('figure');
+        item.className = 'media-preview';
+
+        const thumbnail = document.createElement('img');
+        thumbnail.src = image.image_url;
+        thumbnail.alt = image.name || `Post photo ${index + 1}`;
+        item.appendChild(thumbnail);
+
+        const caption = document.createElement('figcaption');
+        caption.textContent = image.name || `Photo ${index + 1}`;
+        item.appendChild(caption);
+
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'media-preview__remove';
+        removeButton.textContent = 'Remove';
+        removeButton.setAttribute('aria-label', `Remove ${image.name || `photo ${index + 1}`}`);
+        removeButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch(
+                    `/upload_image/${encodeURIComponent(image.filename)}`,
+                    { method: 'DELETE', credentials: 'same-origin' }
+                );
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Unable to remove this photo.');
+                }
+                window.uploadedImages.splice(index, 1);
+                renderUploadedImages();
+            } catch (error) {
+                document.getElementById('image-upload-status').textContent =
+                    error.message || 'Unable to remove this photo.';
+            }
+        });
+        item.appendChild(removeButton);
+        preview.appendChild(item);
+    });
 };
 
 
@@ -1284,57 +1228,6 @@ const uploadImage = async () => {
             updateSourceUI
         );
 
-        const copyImageUrlButton =
-    document.getElementById(
-        'copy-image-url'
-    );
-
-if (copyImageUrlButton) {
-
-    copyImageUrlButton.addEventListener(
-        'click',
-        async () => {
-
-            const imageUrl =
-                document.getElementById(
-                    'uploaded-image-url'
-                );
-
-            if (
-                !imageUrl ||
-                !imageUrl.value
-            ) {
-                return;
-            }
-
-            try {
-
-                await navigator.clipboard.writeText(
-                    imageUrl.value
-                );
-
-                copyImageUrlButton.textContent =
-                    'Copied!';
-
-                setTimeout(() => {
-
-                    copyImageUrlButton.textContent =
-                        'Copy URL';
-
-                }, 1500);
-
-            } catch (error) {
-
-                console.error(
-                    'COPY IMAGE URL ERROR:',
-                    error
-                );
-            }
-        }
-    );
-}
-
-
         input.addEventListener(
             'input',
             updateCharacterCount
@@ -1377,81 +1270,45 @@ const publishContentButton = document.getElementById("publish-content");
 if (publishContentButton) {
 
     publishContentButton.addEventListener("click", async function () {
+        const feedback = document.getElementById("publish-feedback");
+        const feedbackMessage = document.getElementById("publish-feedback-message");
+        const feedbackLink = document.getElementById("publish-feedback-link");
+        const showFeedback = (message, isError = true, connectRequired = false) => {
+            feedbackMessage.textContent = message;
+            feedback.hidden = false;
+            feedback.classList.toggle("is-success", !isError);
+            feedbackLink.hidden = !connectRequired;
+        };
 
-        console.log("PUBLISH NOW CLICKED");
+        feedback.hidden = true;
 
         try {
-
-            // --------------------------------------------------
-            // Get generated content
-            // --------------------------------------------------
-
             const content = generatedContent
                 ? generatedContent.value.trim()
                 : "";
 
             if (!content) {
-
-                alert("Please generate content before publishing.");
-
+                showFeedback("Add post content before publishing.");
                 return;
             }
-
-
-            // --------------------------------------------------
-            // Get selected platform
-            // --------------------------------------------------
 
             const platform = platformSelect
                 ? platformSelect.value
                 : "";
 
-            console.log("================================");
-            console.log("CURRENT PUBLISH CODE IS RUNNING");
-            console.log("platformSelect:", platformSelect);
-            console.log("platform value:", platform);
-            console.log("sourceSelect:", sourceSelect);
-
             if (!platform) {
-
-                alert("Please select a platform.");
-
+                showFeedback("Choose a platform before publishing.");
                 return;
             }
 
-
-            // --------------------------------------------------
-            // Get uploaded image URL
-            // --------------------------------------------------
-
-            let imageUrl = null;
-
-            if (window.uploadedImageUrl) {
-                imageUrl = window.uploadedImageUrl;
+            const images = window.uploadedImages || [];
+            if (platform === "instagram" && images.some((image) => !/\.jpe?g$/i.test(image.name || image.filename))) {
+                showFeedback("Instagram photos must be JPG or JPEG. Remove other images or upload JPG files.");
+                return;
             }
 
-
-            console.log("Publishing data:");
-            console.log("Platform:", platform);
-            console.log("Image URL:", imageUrl);
-
-
-            // --------------------------------------------------
-            // Disable button while publishing
-            // --------------------------------------------------
-
             publishContentButton.disabled = true;
-
-            const originalText =
-                publishContentButton.textContent;
-
-            publishContentButton.textContent =
-                "Publishing...";
-
-
-            // --------------------------------------------------
-            // Send publish request
-            // --------------------------------------------------
+            publishContentButton.textContent = "Publishing…";
 
             const response = await fetch(
                 "/api/publish-content",
@@ -1467,22 +1324,16 @@ if (publishContentButton) {
                     body: JSON.stringify({
                         content: content,
                         platform: platform,
-                        image_url: imageUrl,
-                        image_filename: window.uploadedImageFilename
-
+                        images: images.map((image) => ({
+                            image_url: image.image_url,
+                            filename: image.filename
+                        }))
                     })
                 }
             );
 
-
-            // --------------------------------------------------
-            // Read response
-            // --------------------------------------------------
-
             const responseText = await response.text();
-
             let data;
-
             try {
                 data = JSON.parse(responseText);
             } catch (parseError) {
@@ -1491,51 +1342,23 @@ if (publishContentButton) {
                 );
             }
 
-            console.log(
-                "PUBLISH RESPONSE:",
-                data
-            );
-
-
             if (!response.ok || !data.success) {
-
-                throw new Error(
-                    data.error ||
-                    "Publishing failed."
-                );
+                const error = new Error(data.error || "Publishing failed.");
+                error.connectRequired = Boolean(data.connect_required);
+                throw error;
             }
 
-
-            // --------------------------------------------------
-            // Success
-            // --------------------------------------------------
-
-            alert(
-                data.message ||
-                "Content published successfully."
-            );
-
-
+            window.uploadedImages = [];
+            document.getElementById("uploaded-images-preview").replaceChildren();
+            document.getElementById("uploaded-image-count").textContent = "0 of 10";
+            showFeedback(data.message || "Content published successfully.", false);
         }
         catch (error) {
-
-            console.error(
-                "PUBLISH ERROR:",
-                error
-            );
-
-            alert(
-                error.message ||
-                "Failed to publish content."
-            );
-
+            showFeedback(error.message || "Failed to publish content.", true, Boolean(error.connectRequired));
         }
         finally {
-
             publishContentButton.disabled = false;
-
-            publishContentButton.textContent =
-                "Publish Now";
+            publishContentButton.textContent = "Publish Now";
         }
 
     });
@@ -2233,7 +2056,13 @@ if (publishContentButton) {
                                     post_content:
                                         generatedContent
                                             ? generatedContent.value
-                                            : ''
+                                            : '',
+
+                                    images:
+                                        (window.uploadedImages || []).map((image) => ({
+                                            image_url: image.image_url,
+                                            filename: image.filename
+                                        }))
                                 })
                         }
                     );
@@ -2278,6 +2107,11 @@ if (publishContentButton) {
                     contentStatus.textContent =
                         'Scheduled';
                 }
+
+                window.uploadedImages = [];
+                document.getElementById('uploaded-images-preview')?.replaceChildren();
+                const uploadedImageCount = document.getElementById('uploaded-image-count');
+                if (uploadedImageCount) uploadedImageCount.textContent = '0 of 10';
 
 
                 closeScheduleModal();
@@ -2488,6 +2322,13 @@ if (publishContentButton) {
 // ================================================================
 async function loadCalendar() {
 
+    const calendarEl =
+        document.getElementById("content-calendar");
+
+    if (!calendarEl) {
+        return;
+    }
+
     const response =
         await fetch(
             "/api/content-calendar"
@@ -2498,10 +2339,124 @@ async function loadCalendar() {
         await response.json();
 
 
-    const calendarEl =
-        document.getElementById(
-            "content-calendar"
-        );
+    const eventDetailsModal =
+        document.getElementById("event-details-modal");
+    const eventDetailsCard =
+        eventDetailsModal?.querySelector(".event-details-card");
+    const eventDetailsClose =
+        document.getElementById("event-details-close");
+    const eventDetailsBackdrop =
+        document.getElementById("event-details-backdrop");
+    const eventDetailsDate =
+        document.getElementById("event-details-date");
+    const eventDetailsTime =
+        document.getElementById("event-details-time");
+    const eventDetailsPlatform =
+        document.getElementById("event-details-platform");
+    const eventDetailsStatus =
+        document.getElementById("event-details-status");
+    const eventDetailsContent =
+        document.getElementById("event-details-content");
+    const eventDetailsImageSection =
+        document.getElementById("event-details-image-section");
+    const eventDetailsImages =
+        document.getElementById("event-details-images");
+
+    let lastFocusedEvent = null;
+
+    const closeEventDetails = () => {
+        if (!eventDetailsModal || eventDetailsModal.hidden) {
+            return;
+        }
+
+        eventDetailsModal.hidden = true;
+        document.body.classList.remove("event-details-open");
+        lastFocusedEvent?.focus();
+        lastFocusedEvent = null;
+    };
+
+    const openEventDetails = (info) => {
+        const event = info.event;
+        const props = event.extendedProps;
+        const start = event.start;
+
+        eventDetailsDate.textContent = start
+            ? start.toLocaleDateString(undefined, {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+            })
+            : "Date not available";
+        eventDetailsTime.textContent = start
+            ? start.toLocaleTimeString(undefined, {
+                hour: "numeric",
+                minute: "2-digit"
+            })
+            : "Time not available";
+        eventDetailsPlatform.textContent = props.platform || "Not specified";
+        eventDetailsStatus.textContent = props.status || "Not specified";
+        eventDetailsContent.textContent = props.post_content || "No content available.";
+
+        const imageUrls = Array.isArray(props.image_urls) && props.image_urls.length
+            ? props.image_urls
+            : (props.image_url ? [props.image_url] : []);
+        eventDetailsImageSection.hidden = !imageUrls.length;
+        eventDetailsImages.replaceChildren();
+        imageUrls.forEach((imageUrl, index) => {
+            const link = document.createElement("a");
+            link.href = imageUrl;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+
+            const image = document.createElement("img");
+            image.src = imageUrl;
+            image.alt = `Scheduled post image ${index + 1}`;
+            link.appendChild(image);
+            eventDetailsImages.appendChild(link);
+        });
+
+        lastFocusedEvent = info.el;
+        eventDetailsModal.hidden = false;
+        document.body.classList.add("event-details-open");
+        eventDetailsClose.focus();
+    };
+
+    eventDetailsClose?.addEventListener("click", closeEventDetails);
+    eventDetailsBackdrop?.addEventListener("click", closeEventDetails);
+    eventDetailsCard?.addEventListener("keydown", (event) => {
+        if (event.key !== "Tab") {
+            return;
+        }
+
+        const focusableElements = Array.from(
+            eventDetailsCard.querySelectorAll(
+                'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+            )
+        ).filter((element) => element.getClientRects().length > 0);
+
+        if (!focusableElements.length) {
+            event.preventDefault();
+            eventDetailsClose.focus();
+            return;
+        }
+
+        const first = focusableElements[0];
+        const last = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+    eventDetailsModal?.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            closeEventDetails();
+        }
+    });
 
 
     const calendar =
@@ -2516,43 +2471,7 @@ async function loadCalendar() {
                     events,
 
                 eventClick:
-                    function(info) {
-
-                        const event =
-                            info.event;
-
-                        const props =
-                            event.extendedProps;
-
-
-                        let message =
-
-                            "Date: " +
-                            event.start.toLocaleDateString() +
-
-                            "\nTime: " +
-                            event.start.toLocaleTimeString() +
-
-                            "\nPlatform: " +
-                            props.platform +
-
-                            "\nStatus: " +
-                            props.status +
-
-                            "\nIMAGE URL:\n" +
-                            (props.image_url || "No image URL") +
-                        
-                            "\n\n--------------------\n\n" +
-
-                            "\n\nContent:\n" +
-                            props.post_content;
-
-
-                        
-
-
-                        alert(message);
-                    }
+                    openEventDetails
             }
         );
 

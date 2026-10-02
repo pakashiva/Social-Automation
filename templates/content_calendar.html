@@ -27,6 +27,67 @@
 
 </div>
 
+<div
+    class="event-details-modal"
+    id="event-details-modal"
+    role="presentation"
+    hidden>
+    <button
+        class="event-details-modal__backdrop"
+        id="event-details-backdrop"
+        type="button"
+        aria-label="Close event details"></button>
+
+    <section
+        class="event-details-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="event-details-title"
+        aria-describedby="event-details-content">
+        <header class="event-details-card__header">
+            <div>
+                <h2 id="event-details-title">Scheduled content</h2>
+            </div>
+            <button
+                class="event-details-card__close"
+                id="event-details-close"
+                type="button"
+                aria-label="Close event details">
+                &times;
+            </button>
+        </header>
+
+        <dl class="event-details-card__meta">
+            <div>
+                <dt>Date</dt>
+                <dd id="event-details-date"></dd>
+            </div>
+            <div>
+                <dt>Time</dt>
+                <dd id="event-details-time"></dd>
+            </div>
+            <div>
+                <dt>Platform</dt>
+                <dd id="event-details-platform"></dd>
+            </div>
+            <div>
+                <dt>Status</dt>
+                <dd><span class="event-details-card__status" id="event-details-status"></span></dd>
+            </div>
+        </dl>
+
+        <div class="event-details-card__section">
+            <h3>Content</h3>
+            <p id="event-details-content"></p>
+        </div>
+
+        <div class="event-details-card__section" id="event-details-image-section" hidden>
+            <h3>Images</h3>
+            <div id="event-details-images" class="event-details-card__images"></div>
+        </div>
+    </section>
+</div>
+
 
 <!-- FullCalendar library -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>

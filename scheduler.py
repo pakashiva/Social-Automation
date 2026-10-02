@@ -656,10 +656,39 @@ def publish_due_content_jobs():
             job.status = "publishing"
             db.session.commit()
 
-            publish_to_facebook(
-                message=job.post_content,
-                user_id=job.user_id
-            )
+            scheduled_images = job.images or []
+            image_urls = [image["image_url"] for image in scheduled_images]
+            image_paths = [
+                str(BASE_DIR / "static" / "scheduled_uploads" / image["filename"])
+                for image in scheduled_images
+            ]
+
+            if job.platform == "facebook":
+                publish_to_facebook(
+                    message=job.post_content,
+                    user_id=job.user_id,
+                    image_urls=image_urls
+                )
+            elif job.platform == "instagram":
+                publish_to_instagram(
+                    message=job.post_content,
+                    user_id=job.user_id,
+                    image_urls=image_urls
+                )
+            elif job.platform == "linkedin":
+                publish_to_linkedin(
+                    message=job.post_content,
+                    user_id=job.user_id,
+                    image_paths=image_paths
+                )
+            else:
+                raise ValueError(f"Unsupported scheduled platform: {job.platform}")
+
+            for image_path in image_paths:
+                try:
+                    os.remove(image_path)
+                except OSError as cleanup_error:
+                    print("SCHEDULED IMAGE DELETE ERROR:", repr(cleanup_error))
 
             job.status = "published"
             job.updated_at = datetime.now(UTC)

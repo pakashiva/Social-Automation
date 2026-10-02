@@ -1,9 +1,11 @@
 import os ,json ,traceback
+import shutil
 from zoneinfo import ZoneInfo
 from app import app, db, jwt
 from uuid import uuid4 
 import uuid
 from pathlib import Path
+from urllib.parse import urlparse
 from ruamel.yaml import YAML
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
@@ -130,7 +132,50 @@ def about():
 
 @app.route("/oauth")
 def oauth():
-    return render_page("oauth.html", "OAuth Login — ELVA SocialAI", "oauth")
+    try:
+        verify_jwt_in_request(optional=True)
+        user_id = get_jwt_identity()
+    except Exception:
+        user_id = None
+
+    account = Account.query.filter_by(user_id=user_id).first() if user_id else None
+
+    def expiry_text(expires_at):
+        if not expires_at:
+            return "Expiry information is unavailable. Reconnect to refresh it."
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        seconds_left = (expires_at - datetime.now(UTC)).total_seconds()
+        if seconds_left <= 0:
+            return "Expired. Reconnect to publish."
+        days_left = max(1, int((seconds_left + 86399) // 86400))
+        return f"Reconnect in {days_left} day{'s' if days_left != 1 else ''}."
+
+    def is_expired(expires_at):
+        if not expires_at:
+            return False
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        return expires_at <= datetime.now(UTC)
+
+    account_status = {
+        "logged_in": user_id is not None,
+        "linkedin_connected": bool(account and account.linkedin_access_token and account.author_urn),
+        "linkedin_expiry": expiry_text(account.linkedin_token_expires_at) if account and account.linkedin_access_token else "",
+        "linkedin_expired": bool(account and is_expired(account.linkedin_token_expires_at)),
+        "meta_expiry": expiry_text(account.meta_token_expires_at) if account and account.page_access_token else "",
+        "meta_expired": bool(account and is_expired(account.meta_token_expires_at)),
+        "facebook_connected": bool(account and account.page_access_token and account.page_id),
+        "facebook_page_name": account.page_name if account and account.page_id else None,
+        "instagram_connected": bool(account and account.page_access_token and account.instagram_business_id),
+    }
+
+    return render_template(
+        "oauth.html",
+        title="Social Accounts — ELVA SocialAI",
+        active_page="oauth",
+        account_status=account_status,
+    )
 
 
 @app.route("/company")
@@ -405,7 +450,7 @@ def meta_callback():
 
     # Step 3: Convert to a long-lived user token
     try:
-        long_token, expires_in = get_long_lived_token(short_token)
+        long_token, meta_expires_at = get_long_lived_token(short_token)
     except RuntimeError as e:
         return str(e), 500
 
@@ -424,35 +469,26 @@ def meta_callback():
     if not pages:
         return "No Facebook Pages found.", 404
 
-    # For now, connect the first Page.
-    # Later, allow the user to choose one.
-    page = pages[0]
+    # Prefer a Page that already has a linked Instagram Business account.
+    # The current connection flow stores one Page per user.
+    page = next(
+        (candidate for candidate in pages if candidate.get("instagram_business_account")),
+        pages[0]
+    )
 
     page_id = page["id"]
     page_name = page["name"]
     page_token = page["access_token"]
 
     # Step 6: Retrieve the linked Instagram Business Account
-    try:
-        instagram = page.get("instagram_business_account")
-
-    except RuntimeError as e:
-        return str(e), 500
+    instagram = page.get("instagram_business_account") or {}
 
     print(
         "INSTAGRAM DATA FROM META:",
         instagram
     )
 
-    if not instagram:
-        return (
-        "No Instagram Business Account was found "
-        "for the selected Facebook Page.",
-        400
-    )
-
-
-    instagram_id = (instagram["id"])
+    instagram_id = instagram.get("id")
 
     print(
         "INSTAGRAM BUSINESS ID:",
@@ -467,18 +503,23 @@ def meta_callback():
         account.page_id = page_id
         account.page_access_token = page_token
         account.instagram_business_id = instagram_id
+        account.meta_token_expires_at = meta_expires_at
     else:
         account = Account(
             user_id=user_id,
             page_name=page_name,
             page_id=page_id,
             page_access_token=page_token,
-            instagram_business_id=instagram_id
+            instagram_business_id=instagram_id,
+            meta_token_expires_at=meta_expires_at
         )
         db.session.add(account)
 
     db.session.commit()
-    flash("Meta Account connected Successfully" , "Success")
+    if instagram_id:
+        flash("Facebook Page and Instagram account connected successfully.", "success")
+    else:
+        flash("Facebook Page connected. No linked Instagram Business account was found.", "success")
     
     return redirect(url_for('oauth'))
 
@@ -671,6 +712,7 @@ def schedule_content():
     platform = (payload.get("platform") or "").strip().lower()
     scheduled_at_raw = (payload.get("scheduled_at") or "").strip()
     post_content = payload.get("post_content")
+    images = payload.get("images") or []
 
     if isinstance(post_content, str):
         post_content = post_content.strip() or None
@@ -681,6 +723,44 @@ def schedule_content():
         return jsonify({
                 "error": "Please choose a valid platform."
             }), 400
+
+    if not isinstance(images, list) or len(images) > 10:
+        return jsonify({"error": "A post can include up to 10 images."}), 400
+
+    if platform == "instagram" and not images:
+        return jsonify({"error": "Instagram posts need at least one JPG image."}), 400
+
+    normalized_images = []
+    for image in images:
+        if not isinstance(image, dict):
+            return jsonify({"error": "Invalid image details."}), 400
+        filename = image.get("filename")
+        image_url = image.get("image_url")
+        safe_filename = secure_filename(filename or "")
+        if not safe_filename or safe_filename != filename:
+            return jsonify({"error": "An uploaded image is no longer available. Upload it again."}), 400
+        extension = safe_filename.rsplit(".", 1)[-1].lower() if "." in safe_filename else ""
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            return jsonify({"error": "Unsupported image format."}), 400
+        expected_path = url_for("static", filename=f"uploads/{safe_filename}")
+        if not image_url or urlparse(image_url).path != expected_path:
+            return jsonify({"error": "Invalid uploaded image reference."}), 400
+        if not os.path.isfile(os.path.join(UPLOAD_FOLDER, safe_filename)):
+            return jsonify({"error": "An uploaded image is no longer available. Upload it again."}), 400
+        if platform == "instagram" and extension not in {"jpg", "jpeg"}:
+            return jsonify({"error": "Instagram photos must be JPG or JPEG images."}), 400
+        if platform == "linkedin" and extension not in {"jpg", "jpeg", "png"}:
+            return jsonify({"error": "LinkedIn photos must be JPG or PNG images."}), 400
+        normalized_images.append({
+            "image_url": image_url,
+            "filename": safe_filename,
+            "source_path": os.path.join(UPLOAD_FOLDER, safe_filename),
+        })
+
+    account = Account.query.filter_by(user_id=user_id).first()
+    connection_error = _connection_error(account, platform)
+    if connection_error:
+        return jsonify({"error": connection_error, "connect_required": True}), 400
 
     if not scheduled_at_raw:
         return jsonify({
@@ -711,10 +791,35 @@ def schedule_content():
     else:
         scheduled_at = parsed.astimezone(timezone)
 
+    scheduled_upload_folder = Path(UPLOAD_FOLDER).parent / "scheduled_uploads"
+    scheduled_upload_folder.mkdir(parents=True, exist_ok=True)
+    scheduled_images = []
+    scheduled_image_paths = []
+    try:
+        for image in normalized_images:
+            extension = image["filename"].rsplit(".", 1)[-1].lower()
+            scheduled_filename = f"{uuid.uuid4().hex}.{extension}"
+            scheduled_path = scheduled_upload_folder / scheduled_filename
+            shutil.copy2(image["source_path"], scheduled_path)
+            scheduled_image_paths.append(scheduled_path)
+            scheduled_images.append({
+                "image_url": url_for(
+                    "static",
+                    filename=f"scheduled_uploads/{scheduled_filename}",
+                    _external=True
+                ),
+                "filename": scheduled_filename,
+            })
+    except OSError as exc:
+        for scheduled_path in scheduled_image_paths:
+            scheduled_path.unlink(missing_ok=True)
+        return jsonify({"error": "Unable to prepare the photos for scheduling."}), 500
+
     job = ContentJob(
             user_id=user_id,
             platform=platform,
             post_content=post_content,
+            images=scheduled_images,
             scheduled_at=scheduled_at,
             status="scheduled",
             updated_at=datetime.now(UTC),
@@ -725,11 +830,19 @@ def schedule_content():
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
+        for scheduled_path in scheduled_image_paths:
+            scheduled_path.unlink(missing_ok=True)
         print("SCHEDULE SAVE ERROR:", exc, flush=True)
         traceback.print_exc()
         return jsonify({
                 "error": "Unable to save the schedule. Please try again."
             }), 500
+
+    for image in normalized_images:
+        try:
+            os.remove(image["source_path"])
+        except OSError as cleanup_error:
+            print("TEMP IMAGE DELETE ERROR:", repr(cleanup_error), flush=True)
 
     flash("Content scheduled successfully.", "success")
     flashes = [
@@ -789,6 +902,12 @@ def get_content_calendar():
     # Custom posts
     for post in custom_posts:
 
+        image_urls = [
+            image.get("image_url")
+            for image in (post.images or [])
+            if isinstance(image, dict) and image.get("image_url")
+        ]
+
         events.append({
             "id": f"custom-{post.id}",
             "title": post.post_content[:50],
@@ -796,7 +915,9 @@ def get_content_calendar():
             "extendedProps": {
                 "status": post.status,
                 "platform": post.platform,
-                "post_content": post.post_content
+                "post_content": post.post_content,
+                "image_url": image_urls[0] if image_urls else None,
+                "image_urls": image_urls,
             }
         })
 
@@ -806,6 +927,31 @@ def get_content_calendar():
     )
 
     return jsonify(events)
+
+
+def _connection_error(account, platform):
+    """Return a user-facing publishing error when a platform is not ready."""
+    requirements = {
+        "linkedin": ("linkedin_access_token", "author_urn", "linkedin_token_expires_at"),
+        "facebook": ("page_id", "page_access_token", "meta_token_expires_at"),
+        "instagram": ("instagram_business_id", "page_access_token", "meta_token_expires_at"),
+    }
+    platform_name = platform.title()
+    if not account:
+        return f"Connect your {platform_name} account in Social Accounts before publishing."
+
+    fields = requirements.get(platform)
+    if not fields or any(not getattr(account, field, None) for field in fields[:2]):
+        return f"Connect your {platform_name} account in Social Accounts before publishing."
+
+    expires_at = getattr(account, fields[2], None)
+    if expires_at:
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if expires_at <= datetime.now(UTC):
+            return f"Your {platform_name} connection has expired. Reconnect it in Social Accounts before publishing."
+
+    return None
 
 # publishes the post for 'Publish Now' button in create_content.html
 @app.route("/api/publish-content", methods=["POST"])
@@ -823,9 +969,17 @@ def publish_content():
     data = request.get_json(silent=True) or {}
 
     content = data.get("content")
-    platform = data.get("platform")
-    image_url = data.get("image_url")
-    image_filename = data.get("image_filename")
+    content = content.strip() if isinstance(content, str) else ""
+    platform = (data.get("platform") or "").strip().lower()
+    images = data.get("images")
+
+    # Keep compatibility with older clients that send one image.
+    if images is None and data.get("image_url"):
+        images = [{
+            "image_url": data.get("image_url"),
+            "filename": data.get("image_filename"),
+        }]
+    images = images or []
 
 
     if not content:
@@ -834,10 +988,63 @@ def publish_content():
             "error": "Content is required."
         }), 400
 
-    if not platform:
+    if platform not in {"linkedin", "facebook", "instagram"}:
         return jsonify({
             "success": False,
-            "error": "Platform is required."
+            "error": "Choose a valid platform before publishing."
+        }), 400
+
+    if not isinstance(images, list) or len(images) > 10:
+        return jsonify({
+            "success": False,
+            "error": "A post can include up to 10 images."
+        }), 400
+
+    if platform == "instagram" and not images:
+        return jsonify({
+            "success": False,
+            "error": "Instagram publishing requires at least one JPG image."
+        }), 400
+
+    image_urls = []
+    image_paths = []
+    for image in images:
+        if not isinstance(image, dict):
+            return jsonify({"success": False, "error": "Invalid image details."}), 400
+
+        filename = image.get("filename")
+        image_url = image.get("image_url")
+        safe_filename = secure_filename(filename or "")
+        if not safe_filename or safe_filename != filename:
+            return jsonify({"success": False, "error": "An uploaded image is no longer available. Upload it again."}), 400
+
+        extension = safe_filename.rsplit(".", 1)[-1].lower() if "." in safe_filename else ""
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            return jsonify({"success": False, "error": "Unsupported image format."}), 400
+
+        expected_path = url_for("static", filename=f"uploads/{safe_filename}")
+        if not image_url or urlparse(image_url).path != expected_path:
+            return jsonify({"success": False, "error": "Invalid uploaded image reference."}), 400
+
+        image_path = os.path.join(UPLOAD_FOLDER, safe_filename)
+        if not os.path.isfile(image_path):
+            return jsonify({"success": False, "error": "An uploaded image is no longer available. Upload it again."}), 400
+
+        if platform == "instagram" and extension not in {"jpg", "jpeg"}:
+            return jsonify({"success": False, "error": "Instagram photos must be JPG or JPEG images."}), 400
+        if platform == "linkedin" and extension not in {"jpg", "jpeg", "png"}:
+            return jsonify({"success": False, "error": "LinkedIn photos must be JPG or PNG images."}), 400
+
+        image_urls.append(image_url)
+        image_paths.append(image_path)
+
+    account = Account.query.filter_by(user_id=user_id).first()
+    connection_error = _connection_error(account, platform)
+    if connection_error:
+        return jsonify({
+            "success": False,
+            "connect_required": True,
+            "error": connection_error
         }), 400
 
     try:
@@ -846,7 +1053,8 @@ def publish_content():
 
             publish_to_linkedin(
                 message=content,
-                user_id=user_id
+                user_id=user_id,
+                image_paths=image_paths
             )
 
         elif platform == "facebook":
@@ -854,21 +1062,15 @@ def publish_content():
             publish_to_facebook(
                 message=content,
                 user_id=user_id,
-                image_url=image_url
+                image_urls=image_urls
             )
 
         elif platform == "instagram":
 
-            if not image_url:
-                return jsonify({
-                    "success": False,
-                    "error": "Instagram publishing requires an image."
-                }), 400
-
             publish_to_instagram(
                 message=content,
                 user_id=user_id,
-                image_url=image_url
+                image_urls=image_urls
             )
 
         else:
@@ -880,37 +1082,15 @@ def publish_content():
 
         # Deleting the file after upload.
 
-        image_file_path = None
-
-        print(image_filename)
-        if image_filename:
-            image_file_path = os.path.join(
-            UPLOAD_FOLDER,
-            image_filename
-            )
-
-            print(image_file_path)
-
-            if image_file_path and os.path.exists(image_file_path):
-                print("TRUE, entered the if statement.")
-
-                try:
-                    os.remove(image_file_path)
-                    print(
-                        "IMAGE DELETED:",
-                        image_file_path,
-                        flush=True)
-                except OSError as e:
-                    print(
-                        "IMAGE DELETE ERROR:",
-                        repr(e),
-                        flush=True
-                    )
+        for image_path in image_paths:
+            try:
+                os.remove(image_path)
+            except OSError as cleanup_error:
+                print("IMAGE DELETE ERROR:", repr(cleanup_error), flush=True)
 
 
         return jsonify({
             "success": True,
-            "image_url": image_url,
             "message":
                 f"Content published successfully to {platform.title()}."
         }), 200
@@ -995,61 +1175,65 @@ def generate_image_prompt_route():
         }), 500
 
 @app.route("/upload_image", methods=["POST"])
+@jwt_required()
 def upload_image():
     """
-    Upload an image to the server and return its public URL.
+    Upload one or more images to the server and return public URLs.
     """
 
     try:
-        if "image" not in request.files:
+        images = request.files.getlist("images") or request.files.getlist("image")
+        images = [image for image in images if image and image.filename]
+
+        if not images:
             return jsonify({
                 "success": False,
-                "error": "No image file provided."
+                "error": "Choose at least one image to upload."
             }), 400
 
-        image = request.files["image"]
-
-        if not image.filename:
+        if len(images) > 10:
             return jsonify({
                 "success": False,
-                "error": "No image selected."
+                "error": "You can upload up to 10 images per post."
             }), 400
 
-        original_filename = secure_filename(image.filename)
+        validated_images = []
+        for image in images:
+            original_filename = secure_filename(image.filename)
+            extension = (
+                original_filename.rsplit(".", 1)[1].lower()
+                if "." in original_filename
+                else ""
+            )
 
-        extension = (
-            original_filename.rsplit(".", 1)[1].lower()
-            if "." in original_filename
-            else ""
-        )
+            if extension not in ALLOWED_IMAGE_EXTENSIONS:
+                return jsonify({
+                    "success": False,
+                    "error": "Only PNG, JPG, JPEG and WEBP images are allowed."
+                }), 400
 
-        if extension not in ALLOWED_IMAGE_EXTENSIONS:
-            return jsonify({
-                "success": False,
-                "error": "Only PNG, JPG, JPEG and WEBP images are allowed."
-            }), 400
+            validated_images.append((image, original_filename, extension))
 
-        unique_filename = (
-            f"{uuid.uuid4().hex}.{extension}"
-        )
+        uploaded_images = []
+        for image, original_filename, extension in validated_images:
+            unique_filename = f"{uuid.uuid4().hex}.{extension}"
+            file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+            image.save(file_path)
 
-        file_path = os.path.join(
-            UPLOAD_FOLDER,
-            unique_filename
-        )
-
-        image.save(file_path)
-
-        image_url = url_for(
-            "static",
-            filename=f"uploads/{unique_filename}",
-            _external=True
-        )
+            image_url = url_for(
+                "static",
+                filename=f"uploads/{unique_filename}",
+                _external=True
+            )
+            uploaded_images.append({
+                "image_url": image_url,
+                "filename": unique_filename,
+                "name": original_filename
+            })
 
         return jsonify({
             "success": True,
-            "image_url": image_url,
-            "filename": unique_filename
+            "images": uploaded_images
         }), 200
 
     except Exception as e:
@@ -1059,6 +1243,19 @@ def upload_image():
             "success": False,
             "error": str(e)
         }), 500
+
+
+@app.route("/upload_image/<filename>", methods=["DELETE"])
+@jwt_required()
+def delete_uploaded_image(filename):
+    safe_filename = secure_filename(filename or "")
+    if not safe_filename or safe_filename != filename:
+        return jsonify({"success": False, "error": "Invalid image reference."}), 400
+
+    image_path = os.path.join(UPLOAD_FOLDER, safe_filename)
+    if os.path.isfile(image_path):
+        os.remove(image_path)
+    return jsonify({"success": True}), 200
 
 @app.route("/uploads/<filename>")
 def uploaded_image(filename):

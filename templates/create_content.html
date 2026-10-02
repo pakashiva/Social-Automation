@@ -47,6 +47,7 @@
                  CONTENT SOURCE
                  ================================================= -->
 
+            <div class="content-setup__options">
             <label class="field-group">
 
                 <span>
@@ -119,6 +120,7 @@
                 </span>
 
             </label>
+            </div>
 
 
             <!-- =================================================
@@ -142,7 +144,7 @@
                     id="content-input"
                     name="content_input"
                     placeholder="Share your idea or inspiration..."
-                    rows="9"></textarea>
+                    rows="4"></textarea>
 
 
                 <div class="field-meta">
@@ -251,7 +253,7 @@
             <textarea
                 id="generated-content"
                 name="generated_content"
-                rows="14"
+                rows="8"
                 placeholder="Your generated content will appear here..."></textarea>
 
 
@@ -346,7 +348,7 @@
                 <textarea
                     id="image-prompt"
                     name="image_prompt"
-                    rows="10"
+                    rows="4"
                     readonly
                     placeholder="Your image-generation prompt will appear here..."></textarea>
 
@@ -367,56 +369,33 @@
 
         </section>
 
-        <div id="image-upload-section" class="image-upload-section">
+        <section id="image-upload-section" class="media-upload">
+            <div class="media-upload__heading">
+                <div>
+                    <h3>Add photos</h3>
+                    <p>Choose up to 10 images to publish with your post.</p>
+                </div>
+                <span class="badge badge--draft" id="uploaded-image-count">0 of 10</span>
+            </div>
 
-    <h3>Upload Generated Image</h3>
-
-    <p>
-        Generate the image using the prompt above, then upload it here.
-    </p>
-
-    <input
-        type="file"
-        id="image-upload"
-        accept="image/png,image/jpeg,image/webp"
-    >
-
-    <button
-        type="button"
-        id="upload-image-button"
-    >
-        Upload Image
-    </button>
-
-    <div id="image-upload-status"></div>
-
-    <div id="uploaded-image-preview" style="display: none;">
-        <img
-            id="uploaded-image"
-            src=""
-            alt="Uploaded image"
-            style="max-width: 100%; border-radius: 12px;"
-        >
-
-        <div>
-            <label>Image URL</label>
-
-            <input
-                type="text"
-                id="uploaded-image-url"
-                readonly
-            >
-
-            <button
-                type="button"
-                id="copy-image-url"
-            >
-                Copy URL
-            </button>
-        </div>
-    </div>
-
-</div>
+            <div class="media-upload__controls">
+                <input
+                    type="file"
+                    id="image-upload"
+                    accept="image/png,image/jpeg"
+                    multiple
+                    aria-label="Choose up to 10 photos">
+                <button
+                    type="button"
+                    id="upload-image-button"
+                    class="button button--secondary">
+                    Upload photos
+                </button>
+            </div>
+            <p class="field-help">JPG or PNG · Up to 10 photos. Instagram requires JPG images.</p>
+            <div id="image-upload-status" class="field-help" role="status" aria-live="polite"></div>
+            <div id="uploaded-images-preview" class="media-preview-grid" aria-label="Uploaded photos"></div>
+        </section>
 
 
         <!-- =====================================================
@@ -475,6 +454,11 @@
             id="generate-error"
             class="field-help"
             hidden>
+        </div>
+
+        <div id="publish-feedback" class="publish-feedback" role="alert" hidden>
+            <span id="publish-feedback-message"></span>
+            <a id="publish-feedback-link" href="{{ url_for('oauth') }}" hidden>Manage social accounts</a>
         </div>
 
     </section>

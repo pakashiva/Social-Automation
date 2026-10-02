@@ -4,8 +4,8 @@
 <section class="page-header">
     <div>
         <p class="eyebrow">Integrations</p>
-        <h1>Connect Social Accounts</h1>
-        <p class="lead">Securely connect your social platforms with OAuth. These connections allow automated publishing without storing your passwords.</p>
+        <h1>Social Accounts</h1>
+        <p class="lead">See which channels are ready to publish and when they may need reconnecting.</p>
     </div>
 </section>
 
@@ -16,11 +16,34 @@
                 <path d="M6.5 9H4v11h2.5V9ZM5.25 4A1.75 1.75 0 1 0 5.25 7.5 1.75 1.75 0 0 0 5.25 4ZM20 20h-2.5v-5.6c0-1.8-.7-2.4-1.7-2.4s-1.9.8-1.9 2.5V20H11.4s.05-9.9 0-11H14v1.4c.5-.8 1.7-1.7 3.4-1.7 2.4 0 4.2 1.6 4.2 5.1V20Z"></path>
             </svg>
         </div>
-        <div>
+        <div class="platform-card__details">
             <h2>LinkedIn</h2>
-            <p>Connect your LinkedIn profile or company page for automated posting.</p>
+            <div class="account-status-row">
+                {% if account_status.logged_in and account_status.linkedin_connected and account_status.linkedin_expired %}
+                <span class="badge badge--failed">Reconnect needed</span>
+                {% elif account_status.logged_in and account_status.linkedin_connected %}
+                <span class="badge badge--connected">Connected</span>
+                {% else %}
+                <span class="badge badge--disconnected">Not connected</span>
+                {% endif %}
+            </div>
+            <p>
+                {% if account_status.logged_in and account_status.linkedin_connected %}
+                    {{ account_status.linkedin_expiry }}
+                {% elif account_status.logged_in %}
+                    Connect a LinkedIn profile to publish posts.
+                {% else %}
+                    Sign in to view and manage your connected accounts.
+                {% endif %}
+            </p>
         </div>
-        <a href="/connect_linkedIn"><button class="button button--primary oauth-button" type="button">Connect LinkedIn</button></a>
+        {% if account_status.logged_in %}
+        <a class="button button--primary oauth-button" href="{{ url_for('connect') }}">
+            {{ 'Reconnect LinkedIn' if account_status.linkedin_connected else 'Connect LinkedIn' }}
+        </a>
+        {% else %}
+        <a class="button button--primary oauth-button" href="{{ url_for('login') }}">Sign in to connect</a>
+        {% endif %}
     </article>
 
     <article class="platform-card">
@@ -30,17 +53,50 @@
                 <circle cx="12" cy="19.2" r="1" fill="currentColor" stroke="none"></circle>
             </svg>
         </div>
-        <div>
+        <div class="platform-card__details">
             <h2>Meta</h2>
+            <div class="meta-account-statuses">
+                <div class="meta-account-status">
+                    <span>Facebook Page</span>
+                    {% if account_status.logged_in and account_status.facebook_connected and account_status.meta_expired %}
+                    <span class="badge badge--failed">Reconnect needed</span>
+                    {% elif account_status.logged_in and account_status.facebook_connected %}
+                    <span class="badge badge--connected">Connected</span>
+                    {% else %}
+                    <span class="badge badge--disconnected">Not connected</span>
+                    {% endif %}
+                    {% if account_status.facebook_page_name %}
+                    <small>{{ account_status.facebook_page_name }}</small>
+                    {% endif %}
+                </div>
+                <div class="meta-account-status">
+                    <span>Instagram Business</span>
+                    {% if account_status.logged_in and account_status.instagram_connected and account_status.meta_expired %}
+                    <span class="badge badge--failed">Reconnect needed</span>
+                    {% elif account_status.logged_in and account_status.instagram_connected %}
+                    <span class="badge badge--connected">Connected</span>
+                    {% else %}
+                    <span class="badge badge--disconnected">Not connected</span>
+                    {% endif %}
+                </div>
+            </div>
             <p>
-                Connect your Meta account to authorize both your Facebook Page and
-                linked Instagram Business account for automated publishing and content
-                management.
+                {% if not account_status.logged_in %}
+                    Sign in to view and manage your connected accounts.
+                {% elif account_status.facebook_connected or account_status.instagram_connected %}
+                    {{ account_status.meta_expiry }} This reconnect date comes from the Meta authorization token.
+                {% else %}
+                    Connect a Facebook Page. A linked Instagram Business account is optional.
+                {% endif %}
             </p>
         </div>
-        <a href="/connect_meta"><button class="button button--primary oauth-button" type="button">
-            Connect Meta
-        </button></a>
+        {% if account_status.logged_in %}
+        <a class="button button--primary oauth-button" href="{{ url_for('connect_meta') }}">
+            {{ 'Reconnect Meta' if account_status.facebook_connected or account_status.instagram_connected else 'Connect Meta' }}
+        </a>
+        {% else %}
+        <a class="button button--primary oauth-button" href="{{ url_for('login') }}">Sign in to connect</a>
+        {% endif %}
     </article>
 </section>
 {% endblock %}

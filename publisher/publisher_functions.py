@@ -1,70 +1,111 @@
 from app import db , app
+import json
+import time
 import requests
 from initialize_database.models import PublishedPost , Account
 from app import app, db
 
 LINKEDIN_VERSION = "202604"
 
-def publish_to_facebook(message , user_id, image_url=None):
+def publish_to_facebook(message, user_id, image_url=None, image_urls=None):
+    image_urls = image_urls or ([image_url] if image_url else [])
+    with app.app_context():
+        account = Account.query.filter_by(user_id=user_id).first()
+        if not account:
+            raise ValueError("No Facebook account found")
+        page_access_token = account.page_access_token
+        page_id = account.page_id
 
-    try:
-        with app.app_context():
-            account = Account.query.filter_by(user_id=user_id).first()
-    except Exception as e:
-        print(str(e))   
-
-    PAGE_ACCESS_TOKEN = account.page_access_token
-    PAGE_ID = account.page_id
-
-    if not account:
-        raise ValueError("No Facebook account found")
-
-    if not PAGE_ID:
+    if not page_id:
         raise ValueError("Facebook PAGE_ID is missing")
-
-    if not PAGE_ACCESS_TOKEN:
+    if not page_access_token:
         raise ValueError("Facebook PAGE_ACCESS_TOKEN is missing")
 
-    url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/feed"
-
-    try:
-        print("Starting Facebook publishing...")
-
-        if image_url:
-
-            url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/photos"
-
-            response = requests.post(
-                url,
-                data={
-                    "url": image_url,
-                    "caption": message,
-                    "access_token": PAGE_ACCESS_TOKEN,
-                },
-                timeout=60
-            )
-
-        else:
-
-            url = f"https://graph.facebook.com/v23.0/{PAGE_ID}/feed"
-
-            response = requests.post(
-                url,
-                data={
-                    "message": message,
-                    "access_token": PAGE_ACCESS_TOKEN,
-                },
-                timeout=60
-            )
-
-        print("Facebook Status Code:", response.status_code)
-        print("Facebook Response:", response.text[:500])
-
-    except:
+    if not image_urls:
+        response = requests.post(
+            f"https://graph.facebook.com/v23.0/{page_id}/feed",
+            data={"message": message, "access_token": page_access_token},
+            timeout=60
+        )
         response.raise_for_status()
+        return response.json()
+
+    if len(image_urls) == 1:
+        response = requests.post(
+            f"https://graph.facebook.com/v23.0/{page_id}/photos",
+            data={
+                "url": image_urls[0],
+                "caption": message,
+                "access_token": page_access_token,
+            },
+            timeout=60
+        )
+        response.raise_for_status()
+        return response.json()
+
+    photo_ids = []
+    for image_url in image_urls:
+        upload_response = requests.post(
+            f"https://graph.facebook.com/v23.0/{page_id}/photos",
+            data={
+                "url": image_url,
+                "published": "false",
+                "access_token": page_access_token,
+            },
+            timeout=60
+        )
+        upload_response.raise_for_status()
+        photo_id = upload_response.json().get("id")
+        if not photo_id:
+            raise RuntimeError("Facebook did not return an uploaded photo ID.")
+        photo_ids.append(photo_id)
+
+    post_data = {"message": message, "access_token": page_access_token}
+    for index, photo_id in enumerate(photo_ids):
+        post_data[f"attached_media[{index}]"] = json.dumps({"media_fbid": photo_id})
+
+    response = requests.post(
+        f"https://graph.facebook.com/v23.0/{page_id}/feed",
+        data=post_data,
+        timeout=60
+    )
+    response.raise_for_status()
+    return response.json()
 
 
-def publish_to_linkedin(message, user_id):
+def _upload_linkedin_image(image_path, access_token, author_urn):
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "LinkedIn-Version": LINKEDIN_VERSION,
+        "X-Restli-Protocol-Version": "2.0.0",
+        "Content-Type": "application/json",
+    }
+    initialize_response = requests.post(
+        "https://api.linkedin.com/rest/images?action=initializeUpload",
+        headers=headers,
+        json={"initializeUploadRequest": {"owner": author_urn}},
+        timeout=60
+    )
+    initialize_response.raise_for_status()
+    upload_details = initialize_response.json().get("value", {})
+    upload_url = upload_details.get("uploadUrl")
+    image_urn = upload_details.get("image")
+    if not upload_url or not image_urn:
+        raise RuntimeError("LinkedIn did not return image upload details.")
+
+    with open(image_path, "rb") as image_file:
+        upload_response = requests.put(
+            upload_url,
+            headers={"Authorization": f"Bearer {access_token}"},
+            data=image_file,
+            timeout=120
+        )
+    upload_response.raise_for_status()
+    return image_urn
+
+
+def publish_to_linkedin(message, user_id, image_paths=None):
+    image_paths = image_paths or []
 
     with app.app_context():
 
@@ -92,6 +133,11 @@ def publish_to_linkedin(message, user_id):
             raise ValueError(
                 "LinkedIn author URN is missing"
             )
+
+        image_urns = [
+            _upload_linkedin_image(path, linkedin_access_token, author_urn)
+            for path in image_paths
+        ]
 
         url = "https://api.linkedin.com/rest/posts"
 
@@ -126,6 +172,15 @@ def publish_to_linkedin(message, user_id):
 
             "isReshareDisabledByAuthor": False
         }
+
+        if len(image_urns) == 1:
+            data["content"] = {"media": {"id": image_urns[0]}}
+        elif len(image_urns) > 1:
+            data["content"] = {
+                "multiImage": {
+                    "images": [{"id": image_urn} for image_urn in image_urns]
+                }
+            }
 
         try:
 
@@ -166,7 +221,7 @@ def publish_to_linkedin(message, user_id):
 
             return {
                 "status_code": response.status_code,
-                "response": response.json(),
+                "response": response.json() if response.content else {},
                 "post_id": response.headers.get(
                     "x-restli-id"
                 )
@@ -183,156 +238,117 @@ def publish_to_linkedin(message, user_id):
 
             raise
 
-def publish_to_instagram(
-    message,
-    user_id,
-    image_url
-):
+def _wait_for_instagram_container(container_id, page_access_token):
+    status_url = f"https://graph.facebook.com/v23.0/{container_id}"
+    for _ in range(30):
+        response = requests.get(
+            status_url,
+            params={
+                "fields": "status_code",
+                "access_token": page_access_token,
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        status = response.json().get("status_code")
+        if status == "FINISHED":
+            return
+        if status in {"ERROR", "EXPIRED"}:
+            raise RuntimeError(f"Instagram image processing failed ({status}).")
+        time.sleep(2)
+    raise RuntimeError("Instagram is still processing the selected photos. Please try again shortly.")
+
+
+def publish_to_instagram(message, user_id, image_url=None, image_urls=None):
+    image_urls = image_urls or ([image_url] if image_url else [])
 
     with app.app_context():
-
-        account = Account.query.filter_by(
-            user_id=user_id
-        ).first()
-
+        account = Account.query.filter_by(user_id=user_id).first()
         if not account:
-            raise ValueError(
-                "No account found for this user"
-            )
+            raise ValueError("No Instagram account found for this user")
 
-        instagram_business_id = (
-            account.instagram_business_id
-        )
-
-        page_access_token = (
-            account.page_access_token
-        )
+        instagram_business_id = account.instagram_business_id
+        page_access_token = account.page_access_token
 
         if not instagram_business_id:
-            raise ValueError(
-                "Instagram Business ID is missing"
-            )
-
+            raise ValueError("Instagram Business ID is missing")
         if not page_access_token:
-            raise ValueError(
-                "Instagram page access token is missing"
-            )
-
-        if not image_url:
-            raise ValueError(
-                "Instagram image URL is missing"
-            )
+            raise ValueError("Instagram page access token is missing")
+        if not image_urls:
+            raise ValueError("Instagram publishing requires an image")
 
         try:
+            media_url = f"https://graph.facebook.com/v23.0/{instagram_business_id}/media"
+            publish_url = f"https://graph.facebook.com/v23.0/{instagram_business_id}/media_publish"
 
-            # ------------------------------------------------
-            # Step 1: Create Instagram media container
-            # ------------------------------------------------
+            if len(image_urls) == 1:
+                container_response = requests.post(
+                    media_url,
+                    data={
+                        "image_url": image_urls[0],
+                        "caption": message,
+                        "access_token": page_access_token,
+                    },
+                    timeout=60
+                )
+                container_response.raise_for_status()
+                creation_id = container_response.json().get("id")
+            else:
+                child_ids = []
+                for image_url in image_urls:
+                    child_response = requests.post(
+                        media_url,
+                        data={
+                            "image_url": image_url,
+                            "is_carousel_item": "true",
+                            "access_token": page_access_token,
+                        },
+                        timeout=60
+                    )
+                    child_response.raise_for_status()
+                    child_id = child_response.json().get("id")
+                    if not child_id:
+                        raise RuntimeError("Instagram did not return a photo container ID.")
+                    child_ids.append(child_id)
+                    _wait_for_instagram_container(child_id, page_access_token)
 
-            print(
-                "Creating Instagram media container..."
-            )
-
-            container_url = (
-                f"https://graph.facebook.com/v23.0/"
-                f"{instagram_business_id}/media"
-            )
-
-            container_response = requests.post(
-                container_url,
-                data={
-                    "image_url": image_url,
-                    "caption": message,
-                    "access_token": page_access_token
-                },
-                timeout=60
-            )
-
-            print(
-                "Instagram container status:",
-                container_response.status_code
-            )
-
-            print(
-                "Instagram container response:",
-                container_response.text[:500]
-            )
-
-            container_response.raise_for_status()
-
-            container_data = (
-                container_response.json()
-            )
-
-            creation_id = (
-                container_data.get("id")
-            )
+                carousel_response = requests.post(
+                    media_url,
+                    data={
+                        "media_type": "CAROUSEL",
+                        "children": ",".join(child_ids),
+                        "caption": message,
+                        "access_token": page_access_token,
+                    },
+                    timeout=60
+                )
+                carousel_response.raise_for_status()
+                creation_id = carousel_response.json().get("id")
+                if creation_id:
+                    _wait_for_instagram_container(creation_id, page_access_token)
 
             if not creation_id:
-                raise ValueError(
-                    "Instagram did not return a creation ID"
-                )
-
-            # ------------------------------------------------
-            # Step 2: Publish the media container
-            # ------------------------------------------------
-
-            print(
-                "Publishing Instagram media..."
-            )
-
-            publish_url = (
-                f"https://graph.facebook.com/v23.0/"
-                f"{instagram_business_id}/media_publish"
-            )
+                raise RuntimeError("Instagram did not return a post container ID.")
 
             publish_response = requests.post(
                 publish_url,
                 data={
                     "creation_id": creation_id,
-                    "access_token": page_access_token
+                    "access_token": page_access_token,
                 },
                 timeout=60
             )
-
-            print(
-                "Instagram publish status:",
-                publish_response.status_code
-            )
-
-            print(
-                "Instagram publish response:",
-                publish_response.text[:500]
-            )
-
             publish_response.raise_for_status()
-
-            # ------------------------------------------------
-            # Step 3: Save successful publication
-            # ------------------------------------------------
 
             published_post = PublishedPost(
                 user_id=user_id,
                 platform="Instagram",
                 post_content=message
             )
-
             db.session.add(published_post)
             db.session.commit()
-
-            print(
-                "Instagram post saved to database successfully!"
-            )
-
             return publish_response.json()
 
-        except Exception as e:
-
+        except Exception:
             db.session.rollback()
-
-            print(
-                "INSTAGRAM ERROR:",
-                repr(e)
-            )
-
             raise

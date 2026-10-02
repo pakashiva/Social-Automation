@@ -49,6 +49,7 @@ class Account(db.Model):
     page_name = db.Column(db.String(255))
     page_id = db.Column(db.String(255))
     page_access_token = db.Column(db.Text)
+    meta_token_expires_at = db.Column(db.DateTime(timezone=True))
 
     instagram_business_id = db.Column(db.String(255))
 
@@ -203,6 +204,8 @@ class ContentJob(db.Model):
         db.Text,
         nullable=True
     )
+
+    images = db.Column(db.JSON, nullable=True)
 
     scheduled_at = db.Column(
         db.DateTime(timezone=True),

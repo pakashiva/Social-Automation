@@ -689,10 +689,203 @@ select:focus-visible {
     gap: var(--space-3);
 }
 
+/* Compact create flow and multi-photo selection */
+.content-setup__options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5);
+}
+
+.content-studio #content-input {
+    min-height: 112px;
+    max-height: 260px;
+}
+
+.content-studio #generated-content {
+    min-height: 210px;
+    max-height: 480px;
+}
+
+.content-studio #image-prompt {
+    min-height: 100px;
+    max-height: 260px;
+}
+
+.content-studio .content-result {
+    gap: var(--space-4);
+}
+
+.content-studio .content-result__header {
+    gap: var(--space-4);
+    padding-bottom: var(--space-4);
+}
+
+.media-upload {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-background);
+}
+
+.media-upload__heading,
+.media-upload__controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.media-upload__heading h3 {
+    margin: 0 0 var(--space-1);
+    font-size: 1rem;
+}
+
+.media-upload__heading p,
+.media-upload > .field-help {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: var(--text-caption);
+}
+
+.media-upload__controls input[type="file"] {
+    min-width: 0;
+    flex: 1;
+    padding: var(--space-2);
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-raised);
+    color: var(--color-text-secondary);
+}
+
+.media-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+    gap: var(--space-3);
+}
+
+.media-preview {
+    position: relative;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-raised);
+}
+
+.media-preview img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: var(--color-background-alt);
+}
+
+.media-preview figcaption {
+    padding: var(--space-2) var(--space-2) 0;
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: var(--text-caption);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.media-preview__remove {
+    margin: var(--space-2);
+    padding: 4px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-raised);
+    color: var(--color-text-secondary);
+    font-size: var(--text-caption);
+}
+
+.media-preview__remove:hover,
+.media-preview__remove:focus-visible {
+    border-color: var(--color-error);
+    color: var(--color-error);
+}
+
+.publish-feedback {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid #e5c2be;
+    border-radius: var(--radius-sm);
+    background: var(--color-error-bg);
+    color: var(--color-error);
+    font-size: var(--text-secondary);
+}
+
+.publish-feedback[hidden] {
+    display: none !important;
+}
+
+.publish-feedback a {
+    flex: 0 0 auto;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.publish-feedback.is-success {
+    border-color: #c3ddc9;
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.account-status-row {
+    margin: var(--space-2) 0;
+}
+
+.meta-account-statuses {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin: var(--space-3) 0;
+}
+
+.meta-account-status {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-background);
+    color: var(--color-text-secondary);
+    font-size: var(--text-secondary);
+}
+
+.meta-account-status small {
+    color: var(--color-muted);
+    overflow-wrap: anywhere;
+}
+
+.platform-card__details > p {
+    margin-top: var(--space-2);
+}
+
 
 /* Responsive */
 
 @media (max-width: 640px) {
+
+    .content-setup__options,
+    .meta-account-statuses {
+        grid-template-columns: 1fr;
+    }
+
+    .media-upload__controls,
+    .publish-feedback {
+        align-items: stretch;
+        flex-direction: column;
+    }
 
     .content-result {
         padding: var(--space-5);
