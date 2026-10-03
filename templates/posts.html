@@ -4,64 +4,274 @@
 <section class="page-header">
     <div>
         <p class="eyebrow">Publishing</p>
-        <h1>Published Posts</h1>
-        <p class="lead">Review content that has already been delivered to connected platforms.</p>
+        <h1>Posts</h1>
+        <p class="lead">Review published content and manage posts waiting to be published.</p>
     </div>
 </section>
 
-{% if posts %}
-
-<section class="posts-grid">
-
-    {% for post in posts %}
-
-    <article class="post-card">
-
-        {% if post.image_url %}
-        <img
-            src="{{ post.image_url }}"
-            alt="Post Image"
-            class="post-card__image"
-        >
-        {% endif %}
-
-        <div class="post-card__content">
-
-            <div class="post-card__meta">
-                <span class="badge badge--{{ post.platform|lower }}">{{ post.platform|capitalize }}</span>
-                <span class="badge badge--published">Published</span>
-            </div>
-
-            <p class="post-card__caption">
-                {{ post.post_content }}
-            </p>
-
+<section class="posts-section">
+    <div class="posts-section__header">
+        <div>
+            <p class="eyebrow">Scheduled content</p>
+            <h2>Pending Posts</h2>
+            <p class="lead">Edit or remove content that is scheduled for a future date.</p>
         </div>
-
-        <hr>
-
-    </article>
-
-
-    {% endfor %}
-
-</section>
-
-{% else %}
-
-<section class="empty-state-card">
-    <div class="empty-state-card__icon">
-        <div class="empty-state-illustration"></div>
+        <a class="button button--secondary" href="{{ url_for('content_calendar') }}">View calendar</a>
     </div>
 
-    <h2>No Posts Published Yet</h2>
+    {% if pending_posts %}
+    <section class="posts-grid">
+        {% for post in pending_posts %}
+        <article class="post-card pending-post-card"
+                 data-kind="{{ post.kind }}"
+                 data-post-id="{{ post.id }}"
+                 data-platform="{{ post.platform }}"
+                 data-images="{{ post.images|tojson|forceescape }}"
+                 data-regenerations-left="{{ post.regenerations_left }}">
+            <div class="pending-post-card__body">
+                <div class="post-card__meta">
+                    <span class="badge badge--{{ post.platform|lower }}">{{ post.platform|capitalize }}</span>
+                    <span class="badge badge--scheduled">Scheduled</span>
+                </div>
+                <dl class="pending-post-card__details">
+                    <div><dt>Date and time</dt><dd>{{ post.scheduled_at }}</dd></div>
+                    <div><dt>Platform</dt><dd>{{ post.platform|capitalize }}</dd></div>
+                    <div><dt>Status</dt><dd>Scheduled</dd></div>
+                </dl>
+                <p class="post-card__caption pending-post-card__content">{{ post.post_content }}</p>
+                <label class="field-group pending-post-card__editor" hidden>
+                    <span>Post content</span>
+                    <textarea class="pending-post-card__textarea" rows="7">{{ post.post_content }}</textarea>
+                </label>
 
-    <p>
-        Monitor your published content here once workflows have begun delivering scheduled posts.
-    </p>
+                <div class="pending-post-card__images" aria-label="Post images">
+                    {% for image in post.images %}
+                    {% if image.image_url %}
+                    <figure class="pending-post-image">
+                        <img src="{{ image.image_url }}" alt="Scheduled post image">
+                    </figure>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="pending-post-card__image-editor" hidden>
+                    <div class="pending-post-card__image-preview"></div>
+                    <label class="button button--secondary pending-post-upload-label">
+                        Upload images
+                        <input class="pending-post-upload" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+                    </label>
+                    <p class="field-help pending-post-image-status">You can add up to 10 images.</p>
+                </div>
 
-    <a class="button button--secondary" href="{{ url_for('schedule') }}">Schedule Content</a>
+                <div class="pending-post-card__actions">
+                    <button type="button" class="button button--secondary pending-post-edit">Edit</button>
+                    <div class="pending-post-card__edit-actions" hidden>
+                        <button type="button" class="button button--secondary pending-post-regenerate" {% if not post.regenerations_left %}disabled{% endif %}>
+                            Regenerate content <span class="pending-post-retries">{{ post.regenerations_left }} left today</span>
+                        </button>
+                        <button type="button" class="button button--primary pending-post-save">Save changes</button>
+                        <button type="button" class="button button--secondary pending-post-cancel">Cancel</button>
+                        <button type="button" class="button button--danger pending-post-reject">Reject</button>
+                        {% if not post.has_saved_generation_inputs %}<p class="field-help">This post predates saved prompts. Regeneration will use its current text as the prompt.</p>{% endif %}
+                    </div>
+                    <p class="pending-post-message" role="status" aria-live="polite"></p>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section class="empty-state-card pending-posts-empty">
+        <h3>No Pending Posts</h3>
+        <p>Scheduled posts will appear here until they are published.</p>
+        <a class="button button--primary" href="{{ url_for('create_content') }}">Create content</a>
+    </section>
+    {% endif %}
 </section>
 
-{% endif %}
+<section class="posts-section posts-section--published">
+    <div class="posts-section__header">
+        <div>
+            <p class="eyebrow">Publishing history</p>
+            <h2>Published Posts</h2>
+            <p class="lead">Review content that has already been delivered to connected platforms.</p>
+        </div>
+    </div>
+    {% if posts %}
+    <section class="posts-grid">
+        {% for post in posts %}
+        <article class="post-card">
+            {% if post.image_url %}<img src="{{ post.image_url }}" alt="Post image" class="post-card__image">{% endif %}
+            <div class="post-card__content">
+                <div class="post-card__meta">
+                    <span class="badge badge--{{ post.platform|lower }}">{{ post.platform|capitalize }}</span>
+                    <span class="badge badge--published">Published</span>
+                </div>
+                <p class="post-card__caption">{{ post.post_content }}</p>
+            </div>
+        </article>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section class="empty-state-card">
+        <h3>No Posts Published Yet</h3>
+        <p>Published content will appear here after it has been delivered to a connected platform.</p>
+    </section>
+    {% endif %}
+</section>
+
+<script>
+(() => {
+    const cards = document.querySelectorAll('.pending-post-card');
+    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+
+    cards.forEach((card) => {
+        const kind = card.dataset.kind;
+        const id = card.dataset.postId;
+        const contentView = card.querySelector('.pending-post-card__content');
+        const editor = card.querySelector('.pending-post-card__editor');
+        const textarea = card.querySelector('.pending-post-card__textarea');
+        const imageView = card.querySelector('.pending-post-card__images');
+        const imageEditor = card.querySelector('.pending-post-card__image-editor');
+        const imagePreview = card.querySelector('.pending-post-card__image-preview');
+        const uploadInput = card.querySelector('.pending-post-upload');
+        const imageStatus = card.querySelector('.pending-post-image-status');
+        const editActions = card.querySelector('.pending-post-card__edit-actions');
+        const message = card.querySelector('.pending-post-message');
+        let images = JSON.parse(card.dataset.images || '[]');
+        let original = null;
+        let editing = false;
+
+        const showMessage = (text, isError = false) => {
+            message.textContent = text;
+            message.classList.toggle('is-error', isError);
+        };
+        const renderImages = () => {
+            imagePreview.innerHTML = '';
+            images.forEach((image, index) => {
+                const figure = document.createElement('figure');
+                figure.className = 'pending-post-image';
+                figure.innerHTML = `<img src="${escapeHtml(image.image_url)}" alt="Post image ${index + 1}"><button type="button" class="pending-post-image__remove" aria-label="Remove image ${index + 1}">Remove</button>`;
+                figure.querySelector('button').addEventListener('click', () => {
+                    images.splice(index, 1);
+                    renderImages();
+                });
+                imagePreview.appendChild(figure);
+            });
+        };
+        const setEditing = (next) => {
+            editing = next;
+            card.classList.toggle('is-editing', next);
+            contentView.hidden = next;
+            editor.hidden = !next;
+            imageView.hidden = next;
+            imageEditor.hidden = !next;
+            card.querySelector('.pending-post-edit').hidden = next;
+            editActions.hidden = !next;
+            showMessage('');
+            if (next) {
+                original = { content: textarea.value, images: JSON.parse(JSON.stringify(images)) };
+                renderImages();
+            }
+        };
+
+        card.querySelector('.pending-post-edit').addEventListener('click', () => setEditing(true));
+        card.querySelector('.pending-post-cancel').addEventListener('click', () => {
+            if (original) {
+                textarea.value = original.content;
+                images = original.images;
+                renderImages();
+            }
+            setEditing(false);
+        });
+        uploadInput.addEventListener('change', async () => {
+            const files = Array.from(uploadInput.files || []);
+            if (!files.length) return;
+            if (images.length + files.length > 10) {
+                imageStatus.textContent = 'You can add up to 10 photos per post.';
+                uploadInput.value = '';
+                return;
+            }
+            if (card.dataset.platform === 'instagram' && files.some((file) => !/\.jpe?g$/i.test(file.name))) {
+                imageStatus.textContent = 'Instagram carousel photos must be JPG or JPEG.';
+                uploadInput.value = '';
+                return;
+            }
+            const body = new FormData();
+            files.forEach((file) => body.append('images', file));
+            imageStatus.textContent = 'Uploading images…';
+            try {
+                const response = await fetch('/upload_image', { method: 'POST', body, credentials: 'same-origin' });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'Image upload failed.');
+                images = images.concat(data.images);
+                renderImages();
+                imageStatus.textContent = `${data.images.length} image${data.images.length === 1 ? '' : 's'} uploaded.`;
+            } catch (error) {
+                imageStatus.textContent = error.message;
+            } finally {
+                uploadInput.value = '';
+            }
+        });
+        card.querySelector('.pending-post-save').addEventListener('click', async () => {
+            showMessage('Saving…');
+            try {
+                const response = await fetch(`/api/pending-posts/${kind}/${id}`, {
+                    method: 'PUT', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ post_content: textarea.value, images })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Unable to save changes.');
+                images = data.images;
+                contentView.textContent = data.post_content;
+                imageView.innerHTML = images.map((image, index) => `<figure class="pending-post-image"><img src="${escapeHtml(image.image_url)}" alt="Scheduled post image ${index + 1}"></figure>`).join('');
+                card.dataset.images = JSON.stringify(images);
+                setEditing(false);
+                showMessage('Changes saved.');
+            } catch (error) {
+                showMessage(error.message, true);
+            }
+        });
+        card.querySelector('.pending-post-regenerate').addEventListener('click', async (event) => {
+            const button = event.currentTarget;
+            button.disabled = true;
+            showMessage('Regenerating content…');
+            try {
+                const response = await fetch(`/api/pending-posts/${kind}/${id}/regenerate`, {
+                    method: 'POST', credentials: 'same-origin'
+                });
+                const data = await response.json();
+                if (data.remaining !== undefined) {
+                    const remaining = card.querySelector('.pending-post-retries');
+                    remaining.textContent = `${data.remaining} left today`;
+                    card.dataset.regenerationsLeft = data.remaining;
+                    button.disabled = data.remaining <= 0;
+                }
+                if (!response.ok) throw new Error(data.error || 'Unable to regenerate content.');
+                textarea.value = data.post_content;
+                showMessage('New draft generated. Save changes to keep it.');
+            } catch (error) {
+                button.disabled = Number(card.dataset.regenerationsLeft) <= 0;
+                showMessage(error.message, true);
+            }
+        });
+        card.querySelector('.pending-post-reject').addEventListener('click', async () => {
+            if (!window.confirm('Reject and delete this scheduled post?')) return;
+            try {
+                const response = await fetch(`/api/pending-posts/${kind}/${id}`, {
+                    method: 'DELETE', credentials: 'same-origin'
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Unable to reject this post.');
+                card.remove();
+                if (!document.querySelector('.pending-post-card')) location.reload();
+            } catch (error) {
+                showMessage(error.message, true);
+            }
+        });
+    });
+})();
+</script>
 {% endblock %}

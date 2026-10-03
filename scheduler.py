@@ -7,7 +7,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from croniter import croniter
 
 from agents.image_prompt_generator.functions import generate_image_prompt
-from agents.image_generator_agent.image_generate_functions import generate_image
+from agents.image_generator_agent.image_generate_functions import (
+    apply_company_logo,
+    generate_image,
+)
 
 from app import app, db
 
@@ -113,10 +116,15 @@ def generate_content(user_id, platform):
             f"Unsupported platform: {platform}"
         )
 
-    if hasattr(post, "content"):
-        return post.content
-
-    return str(post)
+    content = post.content if hasattr(post, "content") else str(post)
+    context = {
+        "pillar": str(output.pillar),
+        "topic": str(output.topic),
+        "post_format": str(output.post_format),
+        "brand_voice": str(output.brand_voice),
+        "pillar_guidelines": str(data),
+    }
+    return content, context
 
 
 # ============================================================
@@ -178,7 +186,7 @@ def create_recurring_post(company, scheduled_at, platform):
     # 1. Generate social media content
     # --------------------------------------------------------
 
-    content = generate_content(
+    content, generation_context = generate_content(
         user_id=company.user_id,
         platform=platform
     )
@@ -229,6 +237,18 @@ def create_recurring_post(company, scheduled_at, platform):
     image_filename = image_data["filename"]
     image_path = image_data["file_path"]
 
+    if company.logo_path:
+        logo_path = BASE_DIR / "static" / company.logo_path
+        if logo_path.is_file():
+            try:
+                apply_company_logo(image_path=image_path, logo_path=logo_path)
+            except Exception:
+                Path(image_path).unlink(missing_ok=True)
+                raise
+        else:
+            Path(image_path).unlink(missing_ok=True)
+            raise FileNotFoundError("The saved company logo is missing from storage.")
+
     # --------------------------------------------------------
     # 4. Create database record
     # --------------------------------------------------------
@@ -239,6 +259,7 @@ def create_recurring_post(company, scheduled_at, platform):
         scheduled_at=scheduled_at,
         post_content=content,
         status="scheduled",
+        generation_context=generation_context,
 
         image_prompt=image_prompt,
         image_filename=image_filename,
@@ -490,9 +511,12 @@ def publish_due_recurring_posts():
             # Build public image URL
             # ------------------------------------------------
 
-            image_url = None
+            image_urls = [
+                image.get("image_url") for image in (post.images or [])
+                if isinstance(image, dict) and image.get("image_url")
+            ]
 
-            if post.image_filename:
+            if not image_urls and post.image_filename:
 
                 public_base_url = os.getenv(
                     "PUBLIC_BASE_URL"
@@ -512,13 +536,14 @@ def publish_due_recurring_posts():
                     f"scheduled_uploads/"
                     f"{post.image_filename}"
                 )
+                image_urls = [image_url]
 
             print(
                 f"Publishing recurring post {post.id}"
             )
 
             print(
-                f"Image URL: {image_url}"
+                f"Image URLs: {image_urls}"
             )
 
             # ------------------------------------------------
@@ -530,12 +555,12 @@ def publish_due_recurring_posts():
                 publish_to_facebook(
                     message=post.post_content,
                     user_id=post.user_id,
-                    image_url=image_url
+                    image_urls=image_urls
                 )
 
             elif post.platform == "instagram":
 
-                if not image_url:
+                if not image_urls:
                     raise ValueError(
                         "Instagram recurring post requires "
                         "an image."
@@ -544,14 +569,23 @@ def publish_due_recurring_posts():
                 publish_to_instagram(
                     message=post.post_content,
                     user_id=post.user_id,
-                    image_url=image_url
+                    image_urls=image_urls
                 )
 
             elif post.platform == "linkedin":
 
+                linkedin_image_paths = [
+                    str(BASE_DIR / "static" / "scheduled_uploads" / image["filename"])
+                    for image in (post.images or [])
+                    if isinstance(image, dict) and image.get("filename")
+                ]
+                if not linkedin_image_paths and post.image_filename:
+                    linkedin_image_paths = [str(SCHEDULED_UPLOAD_FOLDER / post.image_filename)]
+
                 publish_to_linkedin(
                     message=post.post_content,
-                    user_id=post.user_id
+                    user_id=post.user_id,
+                    image_paths=linkedin_image_paths
                 )
 
             else:
@@ -572,32 +606,24 @@ def publish_due_recurring_posts():
             # Delete generated image AFTER successful publish
             # ------------------------------------------------
 
+            image_paths = {
+                str(SCHEDULED_UPLOAD_FOLDER / image["filename"])
+                for image in (post.images or [])
+                if isinstance(image, dict) and image.get("filename")
+            }
             if post.image_path:
+                image_paths.add(post.image_path)
+            elif post.image_filename:
+                image_paths.add(str(SCHEDULED_UPLOAD_FOLDER / post.image_filename))
 
-                if os.path.exists(post.image_path):
-
-                    try:
-
-                        os.remove(post.image_path)
-
-                        print(
-                            f"IMAGE DELETED: "
-                            f"{post.image_path}"
-                        )
-
-                    except OSError as delete_error:
-
-                        print(
-                            "IMAGE DELETE ERROR:",
-                            repr(delete_error)
-                        )
-
-                else:
-
-                    print(
-                        f"IMAGE NOT FOUND: "
-                        f"{post.image_path}"
-                    )
+            for image_path in image_paths:
+                try:
+                    os.remove(image_path)
+                    print(f"IMAGE DELETED: {image_path}")
+                except FileNotFoundError:
+                    print(f"IMAGE NOT FOUND: {image_path}")
+                except OSError as delete_error:
+                    print("IMAGE DELETE ERROR:", repr(delete_error))
 
             print(
                 f"Recurring post {post.id} published."

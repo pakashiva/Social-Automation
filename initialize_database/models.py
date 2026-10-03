@@ -118,6 +118,7 @@ class CompanyInfo(db.Model):
     )
 
     content_strategy_json = db.Column(db.JSON)
+    logo_path = db.Column(db.String(500), nullable=True)
 
     scheduled_time = db.Column(
         db.String(50)
@@ -206,6 +207,10 @@ class ContentJob(db.Model):
     )
 
     images = db.Column(db.JSON, nullable=True)
+    generation_source = db.Column(db.String(40), nullable=True)
+    generation_input = db.Column(db.Text, nullable=True)
+    regeneration_count = db.Column(db.Integer, nullable=False, default=0)
+    regeneration_date = db.Column(db.Date, nullable=True)
 
     scheduled_at = db.Column(
         db.DateTime(timezone=True),
@@ -271,6 +276,10 @@ class RecurringContent(db.Model):
     image_filename = db.Column(db.String(255), nullable=True)
     image_path = db.Column(db.String(500), nullable=True)
     image_status = db.Column(db.String(50), nullable=True)
+    images = db.Column(db.JSON, nullable=True)
+    generation_context = db.Column(db.JSON, nullable=True)
+    regeneration_count = db.Column(db.Integer, nullable=False, default=0)
+    regeneration_date = db.Column(db.Date, nullable=True)
 
     created_at = db.Column(
         db.DateTime(timezone=True),

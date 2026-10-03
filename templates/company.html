@@ -36,9 +36,12 @@
                     name="strategy_pdf"
                     type="file"
                     accept="application/pdf"
-                    required>
+                    {% if not company or not company.content_strategy_path %}required{% endif %}>
             <span id="strategy-filename" class="field-note">No file selected</span>
             <span id="strategy-error" class="field-error"></span>
+            {% if company and company.content_strategy_path %}
+            <span class="field-help">A content strategy is already saved. Upload another PDF only if you want to replace it.</span>
+            {% endif %}
         </label>
     </div>
 
@@ -52,12 +55,31 @@
             <span class="field-help">Minimum 100 characters. Maximum 10,000 characters.</span>
             <textarea id="brand-context" name="brand_context" rows="10" minlength="100" maxlength="10000"
              placeholder="Describe your company, products, services, target audience, tone of voice, mission, 
-             competitors, and any important information that should guide AI-generated content." required></textarea>
+             competitors, and any important information that should guide AI-generated content." required>{{ company.brand_context if company and company.brand_context else '' }}</textarea>
             <div class="field-meta">
                 <span id="context-counter">0 / 10000</span>
                 <span id="context-error" class="field-error"></span>
             </div>
         </label>
+    </div>
+
+    <div class="form-section company-logo-section">
+        <div class="form-section__header">
+            <h2>Company Logo</h2>
+            <p>Upload a transparent PNG logo. It will be placed in the top-right corner of images generated automatically for your scheduled posts.</p>
+        </div>
+        <div class="company-logo-upload">
+            {% if company and company.logo_path %}
+            <img class="company-logo-preview" src="{{ url_for('static', filename=company.logo_path) }}" alt="Current company logo">
+            {% endif %}
+            <label class="field-group file-input">
+                <span>Logo image</span>
+                <span class="field-help">PNG only · Transparent background recommended · Maximum 5 MB</span>
+                <input id="company-logo" name="company_logo" type="file" accept=".png,image/png">
+                <span id="company-logo-filename" class="field-note">{% if company and company.logo_path %}Current logo will be kept unless you choose a new one.{% else %}No logo selected{% endif %}</span>
+                <span id="company-logo-error" class="field-error"></span>
+            </label>
+        </div>
     </div>
 
     <div class="form-actions">

@@ -180,7 +180,18 @@ def oauth():
 
 @app.route("/company")
 def company():
-    return render_page("company.html", "Company Data — ELVA SocialAI", "company")
+    try:
+        verify_jwt_in_request(optional=True)
+        user_id = get_jwt_identity()
+    except Exception:
+        user_id = None
+    company_info = CompanyInfo.query.filter_by(user_id=user_id).first() if user_id else None
+    return render_template(
+        "company.html",
+        title="Company Data — ELVA SocialAI",
+        active_page="company",
+        company=company_info,
+    )
 
 
 @app.route("/schedule")
@@ -218,8 +229,52 @@ def posts():
         PublishedPost.posted_at.desc()
     ).all()
 
+    pending_posts = []
+    scheduled_jobs = ContentJob.query.filter_by(
+        user_id=user_id, status="scheduled"
+    ).all()
+    scheduled_recurring = RecurringContent.query.filter_by(
+        user_id=user_id, status="scheduled"
+    ).all()
+
+    def add_pending_post(kind, post, images):
+        today = datetime.now(UTC).date()
+        used = post.regeneration_count or 0
+        if post.regeneration_date != today:
+            used = 0
+        scheduled_at = post.scheduled_at
+        if scheduled_at and scheduled_at.tzinfo is None:
+            scheduled_at = scheduled_at.replace(tzinfo=UTC)
+        pending_posts.append({
+            "kind": kind,
+            "id": post.id,
+            "platform": post.platform,
+            "status": post.status,
+            "post_content": post.post_content or "",
+            "scheduled_at": post.scheduled_at.strftime("%b %d, %Y at %I:%M %p") if post.scheduled_at else "",
+            "_sort_key": scheduled_at.timestamp() if scheduled_at else float("inf"),
+            "images": images,
+            "regenerations_left": max(0, 3 - used),
+            "has_saved_generation_inputs": bool(
+                (post.generation_context if kind == "recurring" else post.generation_source)
+            ),
+        })
+
+    for post in scheduled_jobs:
+        add_pending_post("content_job", post, post.images or [])
+    for post in scheduled_recurring:
+        images = post.images or []
+        if not images and post.image_filename:
+            images = [{
+                "image_url": url_for("static", filename=f"scheduled_uploads/{post.image_filename}", _external=True),
+                "filename": post.image_filename,
+            }]
+        add_pending_post("recurring", post, images)
+    pending_posts.sort(key=lambda item: item.pop("_sort_key"))
+
     return render_template(
-        "posts.html", title="Published Posts — ELVA SocialAI", active_page="posts", posts=posts
+        "posts.html", title="Posts — ELVA SocialAI", active_page="posts",
+        posts=posts, pending_posts=pending_posts
     )
 
 @app.route("/login", methods=["GET", "POST"])
@@ -528,95 +583,115 @@ def meta_callback():
 @jwt_required()
 def save_company_info():
     user_id = get_jwt_identity()
-
-    brand_context = request.form.get(
-        "brand_context",
-        ""
-    ).strip()
+    company = CompanyInfo.query.filter_by(user_id=user_id).first()
+    brand_context = (request.form.get("brand_context") or "").strip()
+    if not brand_context and company:
+        brand_context = company.brand_context or ""
+    if not brand_context:
+        flash("Please enter brand context.", "error")
+        return redirect(url_for("company"))
 
     pdf = request.files.get("strategy_pdf")
-
-    if not brand_context:
-        flash("Please enter brand context." , "error")
+    has_pdf = bool(pdf and pdf.filename)
+    if has_pdf and not pdf.filename.lower().endswith(".pdf"):
+        flash("Only PDF files are allowed.", "error")
+        return redirect(url_for("company"))
+    if not has_pdf and not (company and company.content_strategy_path):
+        flash("Please upload a PDF content strategy.", "error")
         return redirect(url_for("company"))
 
-    if not pdf:
-        flash("Please upload a PDF.", "error")
-        return redirect(url_for("company"))
+    logo_file = request.files.get("company_logo")
+    logo_bytes = None
+    if logo_file and logo_file.filename:
+        logo_bytes = logo_file.stream.read((5 * 1024 * 1024) + 1)
+        if len(logo_bytes) > 5 * 1024 * 1024:
+            flash("The company logo must be 5 MB or smaller.", "error")
+            return redirect(url_for("company"))
+        if not logo_file.filename.lower().endswith(".png") or not logo_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+            flash("Upload the company logo as a valid PNG file.", "error")
+            return redirect(url_for("company"))
+        if len(logo_bytes) < 24:
+            flash("The PNG logo file is incomplete.", "error")
+            return redirect(url_for("company"))
+        logo_width = int.from_bytes(logo_bytes[16:20], "big")
+        logo_height = int.from_bytes(logo_bytes[20:24], "big")
+        if not logo_width or not logo_height or logo_width * logo_height > 25_000_000:
+            flash("The logo dimensions are invalid or too large.", "error")
+            return redirect(url_for("company"))
+        try:
+            import cv2
+            import numpy as np
+            decoded_logo = cv2.imdecode(np.frombuffer(logo_bytes, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+        except Exception:
+            decoded_logo = None
+        if decoded_logo is None or decoded_logo.ndim not in {2, 3} or (decoded_logo.ndim == 3 and decoded_logo.shape[2] not in {3, 4}):
+            flash("The PNG logo could not be decoded. Please choose another file.", "error")
+            return redirect(url_for("company"))
 
-    if pdf.filename == "":
-        flash("Please select a PDF.", "error")
-        return redirect(url_for("company"))
+    pdf_path = None
+    strategy_json = None
+    created_paths = []
+    if has_pdf:
+        user_folder = Path(UPLOAD_FOLDER) / user_id
+        user_folder.mkdir(parents=True, exist_ok=True)
+        pdf_path = user_folder / f"{uuid4().hex}.pdf"
+        pdf.save(pdf_path)
+        created_paths.append(pdf_path)
 
-    if not pdf.filename.lower().endswith(".pdf"):
-        flash("Only PDF files are allowed." , "error")
-        return redirect(url_for("company"))
+        import time
+        start = time.perf_counter()
+        try:
+            from rag_system.rag_functions import build_vector_store
+            build_vector_store(COLLECTION_NAME=str(user_id), PDF_PATH=pdf_path)
+            from pdf_to_json.strategy_loader import convert_pdf_to_strategy
+            strategy = convert_pdf_to_strategy(pdf_path=pdf_path)
+            strategy_json = strategy.model_dump(mode="json")
+            json.dumps(strategy_json)
+            print(f"Took {time.perf_counter() - start:.2f} seconds")
+        except Exception as exc:
+            pdf_path.unlink(missing_ok=True)
+            flash(str(exc), "error")
+            return redirect(url_for("company"))
 
-    #save pdf
+    logo_path = None
+    if logo_bytes is not None:
+        logo_folder = Path(app.root_path) / "static" / "company_logos" / user_id
+        logo_folder.mkdir(parents=True, exist_ok=True)
+        logo_filename = f"{uuid4().hex}.png"
+        logo_file.stream.seek(0)
+        logo_file.save(logo_folder / logo_filename)
+        new_logo_path = logo_folder / logo_filename
+        created_paths.append(new_logo_path)
+        logo_path = f"company_logos/{user_id}/{logo_filename}"
 
-    user_folder = UPLOAD_FOLDER / user_id
-    user_folder.mkdir(parents=True, exist_ok=True)
-
-    filename = f"{uuid4().hex}.pdf"
-    pdf_path = user_folder / filename
-    pdf.save(pdf_path)
-
-    # create embeddings
-
-    collection_name = str(user_id)
-
-    import time 
-    start = time.perf_counter()
-
-    try:
-        from rag_system.rag_functions import build_vector_store        
-        build_vector_store(COLLECTION_NAME=collection_name , PDF_PATH=pdf_path)
-
-    except Exception as e:
-        print("ERROR:", e)
-        traceback.print_exc()
-        flash(str(e) , "error")
-        return redirect(url_for("company"))
-
-
-    try:
-
-        from pdf_to_json.strategy_loader import convert_pdf_to_strategy
-        strategy = convert_pdf_to_strategy(pdf_path=pdf_path)
-    except Exception as e:
-        flash(f"{e}", "error")
-        return redirect(url_for('company'))
-
-    end = time.perf_counter()
-    print(f"Took {end - start:.2f} seconds")
-
-    strategy_json = strategy.model_dump(mode="json")
-
-    # Test serialization
-    json.dumps(strategy_json)
-    
-    company = CompanyInfo.query.filter_by(
-        user_id=user_id
-    ).first()
-
-    if company:
-        company.brand_context = brand_context
+    old_logo_path = company.logo_path if company else None
+    if not company:
+        company = CompanyInfo(user_id=user_id)
+        db.session.add(company)
+    company.brand_context = brand_context
+    if pdf_path:
         company.content_strategy_path = str(pdf_path)
         company.content_strategy_json = strategy_json
+    if logo_path:
+        company.logo_path = logo_path
 
-    else:
-        company = CompanyInfo(
-            user_id=user_id,
-            brand_context=brand_context,
-            content_strategy_path=str(pdf_path),
-            content_strategy_json= strategy_json
-        )
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        for created_path in created_paths:
+            created_path.unlink(missing_ok=True)
+        flash("Unable to save company information. Please try again.", "error")
+        return redirect(url_for("company"))
 
-        db.session.add(company)
+    if logo_path and old_logo_path and old_logo_path != logo_path:
+        old_logo_file = Path(app.root_path) / "static" / old_logo_path
+        try:
+            old_logo_file.unlink(missing_ok=True)
+        except OSError:
+            app.logger.warning("Unable to remove replaced company logo %s", old_logo_file)
 
-    db.session.commit()
-    flash("Company information saved successfully." , "success")
-
+    flash("Company information saved successfully.", "success")
     return redirect(url_for("company"))
 
 
@@ -820,6 +895,8 @@ def schedule_content():
             platform=platform,
             post_content=post_content,
             images=scheduled_images,
+            generation_source=(payload.get("generation_source") or "").strip() or None,
+            generation_input=payload.get("generation_input") if isinstance(payload.get("generation_input"), str) else None,
             scheduled_at=scheduled_at,
             status="scheduled",
             updated_at=datetime.now(UTC),
@@ -838,11 +915,11 @@ def schedule_content():
                 "error": "Unable to save the schedule. Please try again."
             }), 500
 
-    for image in normalized_images:
-        try:
-            os.remove(image["source_path"])
-        except OSError as cleanup_error:
-            print("TEMP IMAGE DELETE ERROR:", repr(cleanup_error), flush=True)
+    # for image in normalized_images:
+    #     try:
+    #         os.remove(image["source_path"])
+    #     except OSError as cleanup_error:
+    #         print("TEMP IMAGE DELETE ERROR:", repr(cleanup_error), flush=True)
 
     flash("Content scheduled successfully.", "success")
     flashes = [
@@ -878,14 +955,14 @@ def get_content_calendar():
     # Recurring posts
     for post in recurring_posts:
 
-        image_url = None
-
-        if post.image_filename:
-            image_url = url_for(
-                "static",
-                filename=f"scheduled_uploads/{post.image_filename}",
-                _external=True
-            )
+        image_urls = [
+            url_for("static", filename=f"scheduled_uploads/{secure_filename(image['filename'])}")
+            for image in (post.images or [])
+            if isinstance(image, dict) and image.get("filename")
+            and secure_filename(image["filename"]) == image["filename"]
+        ]
+        if not image_urls and post.image_filename:
+            image_urls = [url_for("static", filename=f"scheduled_uploads/{secure_filename(post.image_filename)}")]
 
         events.append({
             "id": f"recurring-{post.id}",
@@ -895,7 +972,8 @@ def get_content_calendar():
                 "status": post.status,
                 "platform": post.platform,
                 "post_content": post.post_content,
-                "image_url": image_url
+                "image_url": image_urls[0] if image_urls else None,
+                "image_urls": image_urls,
             }
         })
 
@@ -903,9 +981,10 @@ def get_content_calendar():
     for post in custom_posts:
 
         image_urls = [
-            image.get("image_url")
+            url_for("static", filename=f"scheduled_uploads/{secure_filename(image['filename'])}")
             for image in (post.images or [])
-            if isinstance(image, dict) and image.get("image_url")
+            if isinstance(image, dict) and image.get("filename")
+            and secure_filename(image["filename"]) == image["filename"]
         ]
 
         events.append({
@@ -927,6 +1006,196 @@ def get_content_calendar():
     )
 
     return jsonify(events)
+
+
+def _get_pending_post(kind, post_id, user_id):
+    if kind == "content_job":
+        model = ContentJob
+    elif kind == "recurring":
+        model = RecurringContent
+    else:
+        return None
+    return model.query.filter_by(id=post_id, user_id=user_id, status="scheduled").first()
+
+
+def _save_pending_images(post, kind, images):
+    if not isinstance(images, list) or len(images) > 10:
+        raise ValueError("A post can include up to 10 images.")
+    if post.platform == "instagram" and not images:
+        raise ValueError("Instagram posts need at least one JPG image.")
+
+    folder = Path(UPLOAD_FOLDER).parent / "scheduled_uploads"
+    folder.mkdir(parents=True, exist_ok=True)
+    saved_images = []
+    created_files = []
+    for image in images:
+        if not isinstance(image, dict):
+            raise ValueError("Invalid image details.")
+        filename = image.get("filename")
+        safe_filename = secure_filename(filename or "")
+        parsed_path = urlparse(image.get("image_url") or "").path
+        if not safe_filename or safe_filename != filename:
+            raise ValueError("An image reference is invalid. Upload it again.")
+        extension = safe_filename.rsplit(".", 1)[-1].lower() if "." in safe_filename else ""
+        if extension not in ALLOWED_IMAGE_EXTENSIONS:
+            raise ValueError("Unsupported image format.")
+        if post.platform == "instagram" and extension not in {"jpg", "jpeg"}:
+            raise ValueError("Instagram carousel photos must be JPG or JPEG.")
+        if post.platform == "linkedin" and extension not in {"jpg", "jpeg", "png"}:
+            raise ValueError("LinkedIn photos must be JPG or PNG.")
+
+        if parsed_path == f"/static/uploads/{safe_filename}":
+            source_path = Path(UPLOAD_FOLDER) / safe_filename
+        elif parsed_path == f"/static/scheduled_uploads/{safe_filename}":
+            source_path = folder / safe_filename
+        else:
+            raise ValueError("Invalid image reference. Upload the image again.")
+        if not source_path.is_file():
+            raise ValueError("An image is no longer available. Upload it again.")
+
+        target_name = f"{uuid.uuid4().hex}.{extension}"
+        target_path = folder / target_name
+        shutil.copy2(source_path, target_path)
+        created_files.append(target_path)
+        saved_images.append({
+            "image_url": url_for("static", filename=f"scheduled_uploads/{target_name}", _external=True),
+            "filename": target_name,
+        })
+    return saved_images, created_files
+
+
+def _existing_pending_image_names(post, kind):
+    images = post.images or []
+    names = [image.get("filename") for image in images if isinstance(image, dict)]
+    if kind == "recurring" and not names and post.image_filename:
+        names.append(post.image_filename)
+    return {name for name in names if name}
+
+
+@app.route("/api/pending-posts/<kind>/<int:post_id>", methods=["PUT", "DELETE"])
+@jwt_required()
+def edit_pending_post(kind, post_id):
+    user_id = get_jwt_identity()
+    post = _get_pending_post(kind, post_id, user_id)
+    if not post:
+        return jsonify({"error": "This scheduled post is no longer available."}), 404
+
+    if request.method == "DELETE":
+        image_names = _existing_pending_image_names(post, kind)
+        image_paths = [Path(UPLOAD_FOLDER).parent / "scheduled_uploads" / name for name in image_names]
+        if kind == "recurring" and post.image_path:
+            image_paths.append(Path(post.image_path))
+        db.session.delete(post)
+        db.session.commit()
+        for image_path in image_paths:
+            try:
+                image_path.unlink(missing_ok=True)
+            except OSError:
+                app.logger.warning("Could not delete scheduled image %s", image_path)
+        return jsonify({"ok": True})
+
+    payload = request.get_json(silent=True) or {}
+    content = payload.get("post_content")
+    if not isinstance(content, str) or not content.strip():
+        return jsonify({"error": "Post content is required."}), 400
+    old_names = _existing_pending_image_names(post, kind)
+    created_files = []
+    try:
+        images, created_files = _save_pending_images(post, kind, payload.get("images") or [])
+        post.post_content = content.strip()
+        post.images = images
+        if kind == "recurring":
+            first = images[0] if images else None
+            post.image_filename = first["filename"] if first else None
+            post.image_path = str((Path(UPLOAD_FOLDER).parent / "scheduled_uploads" / first["filename"]).resolve()) if first else None
+            post.image_status = "uploaded" if images else None
+        db.session.commit()
+    except ValueError as exc:
+        for image_path in created_files:
+            image_path.unlink(missing_ok=True)
+        return jsonify({"error": str(exc)}), 400
+    except Exception:
+        db.session.rollback()
+        for image_path in created_files:
+            image_path.unlink(missing_ok=True)
+        app.logger.exception("Could not update pending post")
+        return jsonify({"error": "Unable to save changes. Please try again."}), 500
+
+    new_names = {image["filename"] for image in images}
+    for old_name in old_names - new_names:
+        (Path(UPLOAD_FOLDER).parent / "scheduled_uploads" / old_name).unlink(missing_ok=True)
+    return jsonify({"ok": True, "post_content": post.post_content, "images": images})
+
+
+@app.route("/api/pending-posts/<kind>/<int:post_id>/regenerate", methods=["POST"])
+@jwt_required()
+def regenerate_pending_post(kind, post_id):
+    user_id = get_jwt_identity()
+    post = _get_pending_post(kind, post_id, user_id)
+    if not post:
+        return jsonify({"error": "This scheduled post is no longer available."}), 404
+    today = datetime.now(UTC).date()
+    if post.regeneration_date != today:
+        post.regeneration_date = today
+        post.regeneration_count = 0
+    if post.regeneration_count >= 3:
+        db.session.commit()
+        return jsonify({"error": "This post has reached its 3 regenerations for today.", "remaining": 0}), 429
+
+    if kind == "content_job":
+        has_saved_inputs = bool(post.generation_source)
+    else:
+        context = post.generation_context
+        has_saved_inputs = isinstance(context, dict) and bool(context.get("topic"))
+    post.regeneration_count = (post.regeneration_count or 0) + 1
+    db.session.commit()
+    remaining = 3 - post.regeneration_count
+    try:
+        if kind == "content_job":
+            company = CompanyInfo.query.filter_by(user_id=user_id).first()
+            from agents.user_topic_generator.functions import stream_generated_content
+            generated = "".join(chunk for chunk in stream_generated_content(
+                platform=post.platform,
+                user_input=(post.generation_input or "") if has_saved_inputs else (post.post_content or ""),
+                content_source=post.generation_source if has_saved_inputs else "existing_post",
+                brand_context=company.brand_context if company else None
+            ) if chunk)
+        elif has_saved_inputs:
+            from agents.content_writer_agent.content_functions import (
+                generate_linkedin_content, generate_facebook_content, generate_instagram_content
+            )
+            guidelines = context.get("pillar_guidelines")
+            if guidelines is None:
+                from rag_system.rag_functions import retrieve_semantic_chunks
+                guidelines = retrieve_semantic_chunks(pillar=context["pillar"], user_id=user_id)
+            writers = {
+                "linkedin": generate_linkedin_content,
+                "facebook": generate_facebook_content,
+                "instagram": generate_instagram_content,
+            }
+            result = writers[post.platform](
+                pillar=context["pillar"], topic=context["topic"],
+                post_format=context["post_format"], brand_voice=context["brand_voice"],
+                pillar_guidlines=guidelines
+            )
+            generated = result.content if hasattr(result, "content") else str(result)
+        else:
+            company = CompanyInfo.query.filter_by(user_id=user_id).first()
+            from agents.user_topic_generator.functions import stream_generated_content
+            generated = "".join(chunk for chunk in stream_generated_content(
+                platform=post.platform,
+                user_input=post.post_content or "",
+                content_source="existing_post",
+                brand_context=company.brand_context if company else None
+            ) if chunk)
+        generated = generated.strip()
+        if not generated or "Unable to generate content right now" in generated:
+            return jsonify({"error": "Unable to regenerate content right now. Please try again.", "remaining": remaining}), 502
+        return jsonify({"ok": True, "post_content": generated, "remaining": remaining})
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Pending post regeneration failed")
+        return jsonify({"error": "Unable to regenerate content right now. Please try again.", "remaining": remaining}), 502
 
 
 def _connection_error(account, platform):
@@ -1082,11 +1351,11 @@ def publish_content():
 
         # Deleting the file after upload.
 
-        for image_path in image_paths:
-            try:
-                os.remove(image_path)
-            except OSError as cleanup_error:
-                print("IMAGE DELETE ERROR:", repr(cleanup_error), flush=True)
+        # for image_path in image_paths:
+        #     try:
+        #         os.remove(image_path)
+        #     except OSError as cleanup_error:
+        #         print("IMAGE DELETE ERROR:", repr(cleanup_error), flush=True)
 
 
         return jsonify({
@@ -1253,8 +1522,8 @@ def delete_uploaded_image(filename):
         return jsonify({"success": False, "error": "Invalid image reference."}), 400
 
     image_path = os.path.join(UPLOAD_FOLDER, safe_filename)
-    if os.path.isfile(image_path):
-        os.remove(image_path)
+    # if os.path.isfile(image_path):
+    #     os.remove(image_path)
     return jsonify({"success": True}), 200
 
 @app.route("/uploads/<filename>")

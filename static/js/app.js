@@ -80,6 +80,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const companyLogoInput = document.getElementById('company-logo');
+    const companyLogoFilename = document.getElementById('company-logo-filename');
+    const companyLogoError = document.getElementById('company-logo-error');
+    let companyLogoPreviewUrl = null;
+
+    if (companyLogoInput) {
+        companyLogoInput.addEventListener('change', () => {
+            const file = companyLogoInput.files?.[0];
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.png') || file.size > 5 * 1024 * 1024) {
+                companyLogoError.textContent = file.size > 5 * 1024 * 1024
+                    ? 'The logo must be 5 MB or smaller.'
+                    : 'Please choose a PNG image.';
+                companyLogoInput.value = '';
+                return;
+            }
+            companyLogoError.textContent = '';
+            companyLogoFilename.textContent = file.name;
+            if (companyLogoPreviewUrl) URL.revokeObjectURL(companyLogoPreviewUrl);
+            companyLogoPreviewUrl = URL.createObjectURL(file);
+            let preview = document.querySelector('.company-logo-preview');
+            if (!preview) {
+                preview = document.createElement('img');
+                preview.className = 'company-logo-preview';
+                preview.alt = 'Selected company logo preview';
+                document.querySelector('.company-logo-upload')?.prepend(preview);
+            }
+            preview.src = companyLogoPreviewUrl;
+        });
+    }
+
 
     // ============================================================
     // BRAND CONTEXT
@@ -312,6 +343,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const input =
         document.getElementById('content-input');
+
+    let lastGenerationRequest = null;
 
     const sourceHelp =
         document.getElementById('source-help');
@@ -826,6 +859,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
                 try {
+
+                    lastGenerationRequest = {
+                        content_source: contentSource,
+                        user_input: userInput,
+                        platform
+                    };
 
                     // ==================================================
                     // STEP 1
@@ -2058,6 +2097,12 @@ if (publishContentButton) {
                                             ? generatedContent.value
                                             : '',
 
+                                    generation_source:
+                                        lastGenerationRequest?.content_source || 'generate',
+
+                                    generation_input:
+                                        lastGenerationRequest?.user_input || '',
+
                                     images:
                                         (window.uploadedImages || []).map((image) => ({
                                             image_url: image.image_url,
@@ -2331,9 +2376,14 @@ async function loadCalendar() {
 
     const response =
         await fetch(
-            "/api/content-calendar"
+            "/api/content-calendar",
+            { cache: "no-store", credentials: "same-origin" }
         );
 
+    if (!response.ok) {
+        calendarEl.textContent = "Unable to load scheduled content.";
+        return;
+    }
 
     const events =
         await response.json();
@@ -2469,6 +2519,35 @@ async function loadCalendar() {
 
                 events:
                     events,
+
+                eventContent: (arg) => {
+                    const props = arg.event.extendedProps || {};
+                    const imageUrls = Array.isArray(props.image_urls) && props.image_urls.length
+                        ? props.image_urls
+                        : (props.image_url ? [props.image_url] : []);
+                    const wrapper = document.createElement("span");
+                    wrapper.className = "calendar-event-content";
+                    if (imageUrls.length) {
+                        const thumbnail = document.createElement("img");
+                        thumbnail.className = "calendar-event-content__image";
+                        thumbnail.src = imageUrls[0];
+                        thumbnail.alt = "";
+                        thumbnail.loading = "lazy";
+                        wrapper.appendChild(thumbnail);
+                    }
+                    const title = document.createElement("span");
+                    title.className = "calendar-event-content__title";
+                    title.textContent = arg.event.title || props.platform || "Scheduled post";
+                    wrapper.appendChild(title);
+                    if (imageUrls.length > 1) {
+                        const count = document.createElement("span");
+                        count.className = "calendar-event-content__count";
+                        count.textContent = `+${imageUrls.length - 1}`;
+                        count.setAttribute("aria-label", `${imageUrls.length - 1} more images`);
+                        wrapper.appendChild(count);
+                    }
+                    return { domNodes: [wrapper] };
+                },
 
                 eventClick:
                     openEventDetails
