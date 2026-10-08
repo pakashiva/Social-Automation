@@ -677,6 +677,24 @@ body.is-auth .flash-container {
 .pending-post-message.is-error { color: var(--color-error); }
 .pending-posts-empty { display: grid; justify-items: start; gap: var(--space-3); }
 
+.settings-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    padding: var(--space-6);
+}
+.settings-card__copy { max-width: 680px; }
+.settings-card__copy h2 { margin: 0 0 var(--space-2); }
+.settings-card__copy p { margin-top: var(--space-2); }
+.settings-card__status { font-weight: 600; color: var(--color-text); }
+.settings-card__control { display: grid; justify-items: end; gap: var(--space-3); min-width: 190px; }
+.settings-card__message { min-height: 1.2em; margin: 0; color: var(--color-success); font-size: var(--text-secondary); }
+@media (max-width: 640px) {
+    .settings-card { align-items: stretch; flex-direction: column; }
+    .settings-card__control { justify-items: start; }
+}
+
 .posts-section--published {
     padding-top: var(--space-6);
     border-top: 1px solid var(--color-border);

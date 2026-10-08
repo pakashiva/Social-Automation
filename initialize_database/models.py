@@ -140,6 +140,13 @@ class CompanyInfo(db.Model):
     default=list
     )
 
+    recurring_automation_enabled = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+        server_default=db.true(),
+    )
+
 
 # ============================================================
 # Planner History

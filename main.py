@@ -223,6 +223,44 @@ def schedule():
     company = CompanyInfo.query.filter_by(user_id=user_id).first() if user_id else None
     return render_template("schedule.html", title="Schedule Content — ELVA SocialAI", active_page="schedule", company=company)
 
+
+@app.route("/settings")
+@jwt_required()
+def settings():
+    company = CompanyInfo.query.filter_by(user_id=get_jwt_identity()).first()
+    automation_enabled = company.recurring_automation_enabled if company else True
+    return render_template(
+        "settings.html",
+        title="Settings — ELVA SocialAI",
+        active_page="settings",
+        recurring_automation_enabled=automation_enabled,
+    )
+
+
+@app.route("/api/settings/recurring-automation", methods=["POST"])
+@jwt_required()
+def update_recurring_automation():
+    payload = request.get_json(silent=True) or {}
+    enabled = payload.get("enabled")
+    if not isinstance(enabled, bool):
+        return jsonify({"error": "Choose whether recurring automation is on or off."}), 400
+
+    user_id = get_jwt_identity()
+    company = CompanyInfo.query.filter_by(user_id=user_id).first()
+    if not company:
+        company = CompanyInfo(user_id=user_id)
+        db.session.add(company)
+
+    company.recurring_automation_enabled = enabled
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Could not update recurring automation setting")
+        return jsonify({"error": "Unable to save this setting. Please try again."}), 500
+
+    return jsonify({"ok": True, "enabled": company.recurring_automation_enabled})
+
 @app.route("/create_content")
 @jwt_required()
 def create_content():

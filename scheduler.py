@@ -177,6 +177,10 @@ def create_recurring_post(company, scheduled_at, platform):
     the image information in RecurringContent.
     """
 
+    db.session.refresh(company)
+    if not company.recurring_automation_enabled:
+        return None
+
     print(
         f"Generating {platform} content "
         f"for user {company.user_id}"
@@ -248,6 +252,14 @@ def create_recurring_post(company, scheduled_at, platform):
         else:
             Path(image_path).unlink(missing_ok=True)
             raise FileNotFoundError("The saved company logo is missing from storage.")
+
+    # A user may pause automation while AI generation is in progress.
+    # Recheck before persisting so that in-flight work is discarded.
+    db.session.refresh(company)
+    if not company.recurring_automation_enabled:
+        Path(image_path).unlink(missing_ok=True)
+        print(f"Discarded generated recurring post for paused user {company.user_id}")
+        return None
 
     # --------------------------------------------------------
     # 4. Create database record
@@ -345,6 +357,10 @@ def maintain_recurring_posts(company):
         Wednesday 10 AM    LinkedIn
     """
 
+    db.session.refresh(company)
+    if not company.recurring_automation_enabled:
+        return
+
     now_utc = datetime.now(UTC)
 
     # --------------------------------------------------------
@@ -412,6 +428,10 @@ def maintain_recurring_posts(company):
 
     while generated < missing_posts:
 
+        db.session.refresh(company)
+        if not company.recurring_automation_enabled:
+            return
+
         # Get the next recurring schedule time
         scheduled_at = get_next_schedule(
             company=company,
@@ -425,11 +445,14 @@ def maintain_recurring_posts(company):
             if generated >= missing_posts:
                 break
 
-            create_recurring_post(
+            created_post = create_recurring_post(
                 company=company,
                 scheduled_at=scheduled_at,
                 platform=platform
             )
+
+            if created_post is None:
+                return
 
             generated += 1
 
@@ -452,7 +475,8 @@ def maintain_all_recurring_posts():
     companies = (
         CompanyInfo.query
         .filter(
-            CompanyInfo.scheduled_time.isnot(None)
+            CompanyInfo.scheduled_time.isnot(None),
+            CompanyInfo.recurring_automation_enabled.is_(True),
         )
         .all()
     )

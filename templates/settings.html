@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Account</p>
+        <h1>Settings</h1>
+        <p class="lead">Manage the recurring content automation for your organization.</p>
+    </div>
+</section>
+
+<section class="settings-card card" aria-labelledby="recurring-automation-title">
+    <div class="settings-card__copy">
+        <p class="eyebrow">Automation</p>
+        <h2 id="recurring-automation-title">Recurring post generation</h2>
+        <p>When enabled, ELVA SocialAI generates and schedules upcoming posts for your selected platforms.</p>
+        <p class="settings-card__status" id="recurring-automation-status" aria-live="polite">
+            {{ 'Automation is on. New recurring posts will continue to be generated.' if recurring_automation_enabled else 'Automation is paused. No new recurring posts will be generated.' }}
+        </p>
+        <p class="field-help">Pausing stops new generation and queue replenishment. Posts already scheduled keep their times and can still publish.</p>
+    </div>
+    <div class="settings-card__control">
+        <span class="badge {{ 'badge--connected' if recurring_automation_enabled else 'badge--disconnected' }}" id="recurring-automation-badge">{{ 'On' if recurring_automation_enabled else 'Paused' }}</span>
+        <button type="button" class="button {{ 'button--secondary' if recurring_automation_enabled else 'button--primary' }}" id="recurring-automation-toggle" aria-pressed="{{ 'true' if recurring_automation_enabled else 'false' }}">
+            {{ 'Pause automation' if recurring_automation_enabled else 'Start automation' }}
+        </button>
+        <p class="settings-card__message" id="recurring-automation-message" role="status" aria-live="polite"></p>
+    </div>
+</section>
+
+<script>
+(() => {
+    const button = document.getElementById('recurring-automation-toggle');
+    const badge = document.getElementById('recurring-automation-badge');
+    const status = document.getElementById('recurring-automation-status');
+    const message = document.getElementById('recurring-automation-message');
+    let enabled = button.getAttribute('aria-pressed') === 'true';
+
+    const render = () => {
+        button.setAttribute('aria-pressed', String(enabled));
+        button.textContent = enabled ? 'Pause automation' : 'Start automation';
+        button.classList.toggle('button--primary', !enabled);
+        button.classList.toggle('button--secondary', enabled);
+        badge.textContent = enabled ? 'On' : 'Paused';
+        badge.classList.toggle('badge--connected', enabled);
+        badge.classList.toggle('badge--disconnected', !enabled);
+        status.textContent = enabled
+            ? 'Automation is on. New recurring posts will continue to be generated.'
+            : 'Automation is paused. No new recurring posts will be generated.';
+    };
+
+    button.addEventListener('click', async () => {
+        const nextEnabled = !enabled;
+        button.disabled = true;
+        message.textContent = 'Saving…';
+        try {
+            const response = await fetch('/api/settings/recurring-automation', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ enabled: nextEnabled })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Unable to save this setting.');
+            enabled = data.enabled;
+            render();
+            message.textContent = enabled ? 'Recurring automation started.' : 'Recurring automation paused.';
+        } catch (error) {
+            message.textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    });
+})();
+</script>
+{% endblock %}
