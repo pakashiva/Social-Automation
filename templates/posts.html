@@ -32,6 +32,7 @@
                 <div class="post-card__meta">
                     <span class="badge badge--{{ post.platform|lower }}">{{ post.platform|capitalize }}</span>
                     <span class="badge badge--scheduled">Scheduled</span>
+                    <span class="badge badge--{{ 'approved' if post.approval_status == 'approved' else 'pending' }} pending-post-approval-status">{{ 'Approved' if post.approval_status == 'approved' else ('Approval required' if post.hitl_required else 'Approval not required') }}</span>
                 </div>
                 <dl class="pending-post-card__details">
                     <div><dt>Date and time</dt><dd>{{ post.scheduled_at }}</dd></div>
@@ -64,13 +65,17 @@
 
                 <div class="pending-post-card__actions">
                     <button type="button" class="button button--secondary pending-post-edit">Edit</button>
+                    <div class="pending-post-card__approval-actions">
+                        <button type="button" class="button button--primary pending-post-approve" {% if post.approval_status == 'approved' %}hidden{% endif %}>Approve</button>
+                        <button type="button" class="button button--secondary pending-post-reject-approval">Reject</button>
+                    </div>
                     <div class="pending-post-card__edit-actions" hidden>
                         <button type="button" class="button button--secondary pending-post-regenerate" {% if not post.regenerations_left %}disabled{% endif %}>
                             Regenerate content <span class="pending-post-retries">{{ post.regenerations_left }} left today</span>
                         </button>
                         <button type="button" class="button button--primary pending-post-save">Save changes</button>
                         <button type="button" class="button button--secondary pending-post-cancel">Cancel</button>
-                        <button type="button" class="button button--danger pending-post-reject">Reject</button>
+                        <button type="button" class="button button--danger pending-post-delete">Delete</button>
                         {% if not post.has_saved_generation_inputs %}<p class="field-help">This post predates saved prompts. Regeneration will use its current text as the prompt.</p>{% endif %}
                     </div>
                     <p class="pending-post-message" role="status" aria-live="polite"></p>
@@ -138,6 +143,8 @@
         const uploadInput = card.querySelector('.pending-post-upload');
         const imageStatus = card.querySelector('.pending-post-image-status');
         const editActions = card.querySelector('.pending-post-card__edit-actions');
+        const approveButton = card.querySelector('.pending-post-approve');
+        const rejectApprovalButton = card.querySelector('.pending-post-reject-approval');
         const message = card.querySelector('.pending-post-message');
         let images = JSON.parse(card.dataset.images || '[]');
         let original = null;
@@ -257,14 +264,39 @@
                 showMessage(error.message, true);
             }
         });
-        card.querySelector('.pending-post-reject').addEventListener('click', async () => {
-            if (!window.confirm('Reject and delete this scheduled post?')) return;
+        const decide = async (decision) => {
+            const button = decision === 'approve' ? approveButton : rejectApprovalButton;
+            button.disabled = true;
+            try {
+                const response = await fetch(`/api/pending-posts/${kind}/${id}/${decision}`, {
+                    method: 'POST', credentials: 'same-origin'
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || `Unable to ${decision} this post.`);
+                if (decision === 'reject') {
+                    card.remove();
+                    if (!document.querySelector('.pending-post-card')) location.reload();
+                    return;
+                }
+                approveButton.hidden = true;
+                card.querySelector('.pending-post-approval-status').textContent = 'Approved';
+                card.querySelector('.pending-post-approval-status').className = 'badge badge--approved pending-post-approval-status';
+                showMessage('Approved. This post will publish at its scheduled time.');
+            } catch (error) {
+                button.disabled = false;
+                showMessage(error.message, true);
+            }
+        };
+        approveButton.addEventListener('click', () => decide('approve'));
+        rejectApprovalButton.addEventListener('click', () => decide('reject'));
+        card.querySelector('.pending-post-delete').addEventListener('click', async () => {
+            if (!window.confirm('Delete this scheduled post?')) return;
             try {
                 const response = await fetch(`/api/pending-posts/${kind}/${id}`, {
                     method: 'DELETE', credentials: 'same-origin'
                 });
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Unable to reject this post.');
+                if (!response.ok) throw new Error(data.error || 'Unable to delete this post.');
                 card.remove();
                 if (!document.querySelector('.pending-post-card')) location.reload();
             } catch (error) {

@@ -259,6 +259,10 @@ def create_recurring_post(company, scheduled_at, platform):
         scheduled_at=scheduled_at,
         post_content=content,
         status="scheduled",
+        hitl_required=bool(company.notify_check),
+        notify_hours_before=(company.notify_hours_before or 1) if company.notify_check else None,
+        publish_if_unapproved=bool(company.publish_if_unapproved),
+        approval_status="pending" if company.notify_check else "not_required",
         generation_context=generation_context,
 
         image_prompt=image_prompt,
@@ -500,6 +504,16 @@ def publish_due_recurring_posts():
 
         try:
 
+            if post.hitl_required and post.approval_status == "pending" and not post.publish_if_unapproved:
+                post.status = "rejected"
+                post.approval_status = "expired"
+                db.session.commit()
+                print(f"Recurring post {post.id} skipped: approval was not received.")
+                continue
+
+            if post.approval_status == "rejected":
+                continue
+
             # ------------------------------------------------
             # Mark as publishing first
             # ------------------------------------------------
@@ -679,6 +693,16 @@ def publish_due_content_jobs():
 
         try:
 
+            if job.hitl_required and job.approval_status == "pending" and not job.publish_if_unapproved:
+                job.status = "rejected"
+                job.approval_status = "expired"
+                db.session.commit()
+                print(f"ContentJob {job.id} skipped: approval was not received.")
+                continue
+
+            if job.approval_status == "rejected":
+                continue
+
             job.status = "publishing"
             db.session.commit()
 
@@ -751,23 +775,38 @@ def send_post_notification(
     scheduled_at,
     post_content,
 ):
-    """
-    Send the 1-hour-before-publishing notification.
-
-    Email content is intentionally left to the application owner.
-    """
+    """Send an approval reminder through the existing ELVA Notify service."""
 
     if not user or not user.email:
         raise ValueError(
             "User email is missing"
         )
 
-    # You will provide the actual email content.
-    subject = "Your scheduled post is coming up"
+    from html import escape
 
-    body = """
-    YOUR EMAIL CONTENT HERE
-    """
+    subject = "Approval needed: your upcoming social media post"
+    posts_url = os.getenv("POSTS_PAGE_URL")
+    if not posts_url:
+        raise ValueError("POSTS_PAGE_URL is not configured.")
+    first_name = (user.email.split("@", 1)[0] or "there").replace(".", " ").replace("_", " ")
+    preview = (post_content or "").strip()
+    if len(preview) > 400:
+        preview = preview[:397].rstrip() + "..."
+    safe_preview = escape(preview)
+    safe_name = escape(first_name)
+    safe_platform = escape(str(platform).capitalize())
+    scheduled_utc = scheduled_at.replace(tzinfo=UTC) if scheduled_at.tzinfo is None else scheduled_at.astimezone(UTC)
+    scheduled_label = escape(scheduled_utc.strftime("%B %d, %Y at %I:%M %p UTC"))
+    body = f"""<!doctype html><html><body style="margin:0;background:#f4f6fa;font-family:Arial,sans-serif;color:#18243a">
+      <div style="max-width:600px;margin:32px auto;background:#fff;border:1px solid #e2e7ef;border-radius:12px;padding:32px">
+        <h1 style="font-size:22px;margin:0 0 18px">Your post is awaiting approval</h1>
+        <p>Hi {safe_name},</p>
+        <p>We’re ELVA SocialAI. Please review and approve your upcoming {safe_platform} post before it is scheduled to publish.</p>
+        <p><strong>Scheduled for:</strong> {scheduled_label}</p>
+        {f'<div style="padding:16px;background:#f7f8fb;border-radius:8px;white-space:pre-wrap">{safe_preview}</div>' if safe_preview else ''}
+        <p style="margin:28px 0"><a href="{escape(posts_url, quote=True)}" style="background:#172b4d;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block">Review your posts</a></p>
+        <p>If no decision is made before the scheduled time, your saved approval preference will apply.</p>
+      </div></body></html>"""
 
     return send_email(
         recipient=user.email,
@@ -775,35 +814,26 @@ def send_post_notification(
         body=body,
     )
 
-def is_notification_due(scheduled_at, now):
-    notification_time = (
-        scheduled_at - timedelta(hours=1)
-    )
-
-    return (
-        notification_time <= now
-        and scheduled_at > now
-    )
+def is_notification_due(scheduled_at, now, hours_before):
+    if not scheduled_at or not hours_before:
+        return False
+    if scheduled_at.tzinfo is None:
+        scheduled_at = scheduled_at.replace(tzinfo=UTC)
+    notification_time = scheduled_at - timedelta(hours=hours_before)
+    return notification_time <= now < scheduled_at
 
 def notify_due_content_jobs():
 
     now_utc = datetime.now(UTC)
 
-    notification_deadline = (
-        now_utc + timedelta(hours=1)
-    )
-
     jobs = (
         ContentJob.query
         .filter(
             ContentJob.status == "scheduled",
-
+            ContentJob.hitl_required.is_(True),
+            ContentJob.approval_status == "pending",
             ContentJob.scheduled_at.isnot(None),
-
             ContentJob.scheduled_at > now_utc,
-
-            ContentJob.scheduled_at <= notification_deadline,
-
             ContentJob.email_notified_at.is_(None),
         )
         .order_by(
@@ -813,6 +843,9 @@ def notify_due_content_jobs():
     )
 
     for job in jobs:
+
+        if not is_notification_due(job.scheduled_at, now_utc, job.notify_hours_before):
+            continue
 
         try:
 
@@ -857,19 +890,13 @@ def notify_due_recurring_posts():
 
     now_utc = datetime.now(UTC)
 
-    notification_deadline = (
-        now_utc + timedelta(hours=1)
-    )
-
     posts = (
         RecurringContent.query
         .filter(
             RecurringContent.status == "scheduled",
-
+            RecurringContent.hitl_required.is_(True),
+            RecurringContent.approval_status == "pending",
             RecurringContent.scheduled_at > now_utc,
-
-            RecurringContent.scheduled_at <= notification_deadline,
-
             RecurringContent.email_notified_at.is_(None),
         )
         .order_by(
@@ -879,6 +906,9 @@ def notify_due_recurring_posts():
     )
 
     for post in posts:
+
+        if not is_notification_due(post.scheduled_at, now_utc, post.notify_hours_before):
+            continue
 
         try:
 

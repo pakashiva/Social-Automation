@@ -125,6 +125,8 @@ class CompanyInfo(db.Model):
     )
 
     notify_check = db.Column(db.Boolean, nullable=False, default=False , server_default=db.false())
+    notify_hours_before = db.Column(db.Integer, nullable=True)
+    publish_if_unapproved = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
     
     timezone = db.Column(
         db.String(50),
@@ -229,6 +231,12 @@ class ContentJob(db.Model):
         nullable=True
     )
 
+    hitl_required = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    notify_hours_before = db.Column(db.Integer, nullable=True)
+    publish_if_unapproved = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
+    approval_status = db.Column(db.String(20), nullable=False, default="not_required", server_default="not_required")
+    approved_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
     status = db.Column(
         db.String(30),
         default="draft",
@@ -298,3 +306,9 @@ class RecurringContent(db.Model):
         db.DateTime(timezone=True),
         nullable=True
     )
+
+    hitl_required = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    notify_hours_before = db.Column(db.Integer, nullable=True)
+    publish_if_unapproved = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
+    approval_status = db.Column(db.String(20), nullable=False, default="not_required", server_default="not_required")
+    approved_at = db.Column(db.DateTime(timezone=True), nullable=True)

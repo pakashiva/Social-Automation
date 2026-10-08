@@ -100,6 +100,25 @@ def inject_auth_status():
             "logged_in": False
         }
 
+
+@app.after_request
+def refresh_page_session(response):
+    """Renew the 15-day JWT when an authenticated HTML page is visited."""
+    if request.method != "GET" or response.mimetype != "text/html" or request.path.startswith("/static/"):
+        return response
+    try:
+        verify_jwt_in_request(optional=True)
+        user_id = get_jwt_identity()
+        if user_id:
+            refreshed = create_access_token(identity=user_id, expires_delta=timedelta(days=15))
+            response.set_cookie(
+                "access_token", refreshed, max_age=15 * 24 * 60 * 60,
+                httponly=True, secure=False, samesite="Lax"
+            )
+    except Exception:
+        pass
+    return response
+
 UPLOAD_FOLDER = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "static",
@@ -196,7 +215,13 @@ def company():
 
 @app.route("/schedule")
 def schedule():
-    return render_page("schedule.html", "Schedule Content — ELVA SocialAI", "schedule")
+    try:
+        verify_jwt_in_request(optional=True)
+        user_id = get_jwt_identity()
+    except Exception:
+        user_id = None
+    company = CompanyInfo.query.filter_by(user_id=user_id).first() if user_id else None
+    return render_template("schedule.html", title="Schedule Content — ELVA SocialAI", active_page="schedule", company=company)
 
 @app.route("/create_content")
 @jwt_required()
@@ -250,6 +275,8 @@ def posts():
             "id": post.id,
             "platform": post.platform,
             "status": post.status,
+            "approval_status": post.approval_status,
+            "hitl_required": post.hitl_required,
             "post_content": post.post_content or "",
             "scheduled_at": post.scheduled_at.strftime("%b %d, %Y at %I:%M %p") if post.scheduled_at else "",
             "_sort_key": scheduled_at.timestamp() if scheduled_at else float("inf"),
@@ -307,7 +334,8 @@ def login():
         print("GENERATING ACCESS TOKEN" , flush=True)
 
         access_token = create_access_token(
-            identity=user.user_id
+            identity=user.user_id,
+            expires_delta=timedelta(days=15)
         )
 
         response = make_response(
@@ -319,6 +347,7 @@ def login():
         response.set_cookie(
             "access_token",
             access_token,
+            max_age=15 * 24 * 60 * 60,
             httponly=True,
             secure=False,      # True in production (HTTPS)
             samesite="Lax"
@@ -385,12 +414,20 @@ def schedule_post():
     timezone = request.form.get("timezone")
 
     platforms = request.form.getlist("platforms")
+    notify_check = request.form.get("notify_check") == "true"
+    notify_hours_before = request.form.get("notify_hours_before", type=int)
+    unapproved_action = request.form.get("unapproved_action", "")
 
     if not input_text:
         return "Schedule instruction is required.", 400
 
     if not platforms:
         return "Please select at least one platform.", 400
+
+    if notify_check and notify_hours_before not in {1, 2, 4, 6, 8}:
+        return "Choose a notification lead time when approval is enabled.", 400
+    if notify_check and unapproved_action not in {"publish", "skip"}:
+        return "Choose what happens when a post is not approved.", 400
 
     cron_expression = convert_to_cron(input_text)
 
@@ -404,7 +441,10 @@ def schedule_post():
             user_id=user_id,
             scheduled_time=cron_expression,
             timezone=timezone,
-            platforms=platforms
+            platforms=platforms,
+            notify_check=notify_check,
+            notify_hours_before=notify_hours_before if notify_check else None,
+            publish_if_unapproved=(unapproved_action == "publish") if notify_check else True
         )
 
         db.session.add(company)
@@ -414,6 +454,9 @@ def schedule_post():
         company.scheduled_time = cron_expression
         company.timezone = timezone
         company.platforms = platforms
+        company.notify_check = notify_check
+        company.notify_hours_before = notify_hours_before if notify_check else None
+        company.publish_if_unapproved = (unapproved_action == "publish") if notify_check else True
 
     db.session.commit()
 
@@ -788,6 +831,19 @@ def schedule_content():
     scheduled_at_raw = (payload.get("scheduled_at") or "").strip()
     post_content = payload.get("post_content")
     images = payload.get("images") or []
+    hitl_required = payload.get("hitl_required") is True
+    notify_hours_before = payload.get("notify_hours_before")
+    unapproved_action = payload.get("unapproved_action")
+
+    if hitl_required:
+        try:
+            notify_hours_before = int(notify_hours_before)
+        except (TypeError, ValueError):
+            notify_hours_before = None
+        if notify_hours_before not in {1, 2, 4, 6, 8}:
+            return jsonify({"error": "Choose a notification lead time."}), 400
+        if unapproved_action not in {"publish", "skip"}:
+            return jsonify({"error": "Choose what happens when the post is not approved."}), 400
 
     if isinstance(post_content, str):
         post_content = post_content.strip() or None
@@ -899,6 +955,10 @@ def schedule_content():
             generation_input=payload.get("generation_input") if isinstance(payload.get("generation_input"), str) else None,
             scheduled_at=scheduled_at,
             status="scheduled",
+            hitl_required=hitl_required,
+            notify_hours_before=notify_hours_before if hitl_required else None,
+            publish_if_unapproved=(unapproved_action == "publish") if hitl_required else True,
+            approval_status="pending" if hitl_required else "not_required",
             updated_at=datetime.now(UTC),
         )
 
@@ -1125,6 +1185,27 @@ def edit_pending_post(kind, post_id):
     for old_name in old_names - new_names:
         (Path(UPLOAD_FOLDER).parent / "scheduled_uploads" / old_name).unlink(missing_ok=True)
     return jsonify({"ok": True, "post_content": post.post_content, "images": images})
+
+
+@app.route("/api/pending-posts/<kind>/<int:post_id>/<decision>", methods=["POST"])
+@jwt_required()
+def decide_pending_post(kind, post_id, decision):
+    if decision not in {"approve", "reject"}:
+        return jsonify({"error": "Choose approve or reject."}), 400
+    post = _get_pending_post(kind, post_id, get_jwt_identity())
+    if not post:
+        return jsonify({"error": "This scheduled post is no longer available."}), 404
+
+    if decision == "approve":
+        post.approval_status = "approved"
+        post.approved_at = datetime.now(UTC)
+        db.session.commit()
+        return jsonify({"ok": True, "approval_status": "approved"})
+
+    post.approval_status = "rejected"
+    post.status = "rejected"
+    db.session.commit()
+    return jsonify({"ok": True, "approval_status": "rejected"})
 
 
 @app.route("/api/pending-posts/<kind>/<int:post_id>/regenerate", methods=["POST"])

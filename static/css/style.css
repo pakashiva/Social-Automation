@@ -649,6 +649,9 @@ body.is-auth .flash-container {
     gap: var(--space-2);
 }
 
+.pending-post-card__approval-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.badge--approved { background: var(--color-success-bg); color: var(--color-success); border-color: #c3ddc9; }
+
 .pending-post-card__edit-actions[hidden],
 .pending-post-card__editor[hidden],
 .pending-post-card__image-editor[hidden],
@@ -862,6 +865,46 @@ body.is-auth .flash-container {
 
     cursor: pointer !important;
 }
+
+.notification-checkbox > input#schedule-hitl {
+    all: unset;
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    box-sizing: border-box !important;
+    flex: 0 0 18px !important;
+    display: block !important;
+    border: 1.5px solid #9ca3af !important;
+    border-radius: 4px !important;
+    background: #fff !important;
+    cursor: pointer !important;
+}
+.notification-checkbox > input#schedule-hitl:checked {
+    background: #16294a !important;
+    border-color: #16294a !important;
+}
+.notification-checkbox > input#schedule-hitl:checked::after {
+    content: "✓";
+    display: block;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+}
+
+.notification-preferences,
+.schedule-approval-preferences {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+}
+.notification-preferences[hidden],
+.schedule-approval-preferences[hidden] { display: none; }
+.schedule-approval-option { margin-bottom: 0; }
+.schedule-approval-option .field-help { margin: 4px 0 0 28px; }
 
 /* Checked */
 .notification-checkbox > input#notify-check:checked {

@@ -525,6 +525,36 @@
 
             <div class="schedule-modal__body">
 
+                <div class="field-group schedule-approval-option">
+                    <label class="notification-checkbox" for="schedule-hitl">
+                        <input type="checkbox" id="schedule-hitl" name="hitl_required">
+                        <span>Require my approval before publishing</span>
+                    </label>
+                    <p class="field-help">We’ll email you before this post is due and wait for your decision.</p>
+                </div>
+
+                <div id="schedule-approval-preferences" class="schedule-approval-preferences" hidden>
+                    <label class="field-group" for="schedule-notify-hours">
+                        <span>Notify me before publishing</span>
+                        <select id="schedule-notify-hours" name="notify_hours_before">
+                            <option value="">Choose lead time</option>
+                            <option value="1">1 hour before</option>
+                            <option value="2">2 hours before</option>
+                            <option value="4">4 hours before</option>
+                            <option value="6">6 hours before</option>
+                            <option value="8">8 hours before</option>
+                        </select>
+                    </label>
+                    <label class="field-group" for="schedule-unapproved-action">
+                        <span>If you do not respond</span>
+                        <select id="schedule-unapproved-action" name="unapproved_action">
+                            <option value="">Choose what happens</option>
+                            <option value="publish">Publish the post</option>
+                            <option value="skip">Do not publish the post</option>
+                        </select>
+                    </label>
+                </div>
+
                 <div class="field-group">
 
                     <label

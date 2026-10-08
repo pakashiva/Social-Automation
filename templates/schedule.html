@@ -124,7 +124,7 @@
 
         </label>
         
-        <label class="field-group notification-field">
+        <div class="field-group notification-field">
             <span>Notifications</span>
 
             <span class="field-help">
@@ -136,15 +136,50 @@
                     id="notify-check"
                     name="notify_check"
                     type="checkbox"
-                    value="true">
+                    value="true"
+                    {% if company and company.notify_check %}checked{% endif %}>
 
                 <span>Human in the loop Approval</span>
             </div>
-        </label>
+            <div id="approval-preferences" class="notification-preferences" {% if not company or not company.notify_check %}hidden{% endif %}>
+                <label class="field-group">
+                    <span>Notify me before publishing</span>
+                    <select name="notify_hours_before" id="notify-hours-before">
+                        <option value="">Choose lead time</option>
+                        {% for hours in [1, 2, 4, 6, 8] %}
+                        <option value="{{ hours }}" {% if company and company.notify_hours_before == hours %}selected{% endif %}>{{ hours }} hour{{ 's' if hours != 1 else '' }} before</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="field-group">
+                    <span>If you do not respond</span>
+                    <select name="unapproved_action" id="unapproved-action">
+                        <option value="">Choose what happens</option>
+                        <option value="publish" {% if company and company.publish_if_unapproved %}selected{% endif %}>Publish the post</option>
+                        <option value="skip" {% if company and not company.publish_if_unapproved %}selected{% endif %}>Do not publish the post</option>
+                    </select>
+                </label>
+            </div>
+        </div>
 
         <div class="form-actions">
             <button type="submit" class="button button--primary">Save Schedule</button>
         </div>
     </div>
 </form>
+<script>
+(() => {
+    const checkbox = document.getElementById('notify-check');
+    const preferences = document.getElementById('approval-preferences');
+    const hours = document.getElementById('notify-hours-before');
+    const action = document.getElementById('unapproved-action');
+    const update = () => {
+        preferences.hidden = !checkbox.checked;
+        hours.required = checkbox.checked;
+        action.required = checkbox.checked;
+    };
+    checkbox.addEventListener('change', update);
+    update();
+})();
+</script>
 {% endblock %}

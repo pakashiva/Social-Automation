@@ -1,11 +1,8 @@
 import os
 import requests
+from dotenv import load_dotenv
 
-
-NOTIFY_API_KEY = os.getenv("NOTIFY_API_KEY")
-NOTIFY_APP_ID = os.getenv("NOTIFY_APP_ID")
-NOTIFY_BRAND_ID = os.getenv("NOTIFY_BRAND_ID")
-NOTIFY_EMAIL_ENDPOINT = os.getenv("NOTIFY_EMAIL_ENDPOINT")
+load_dotenv()
 
 
 class NotifyConfigurationError(Exception):
@@ -19,16 +16,16 @@ class NotifyEmailError(Exception):
 def validate_notify_config():
     missing = []
 
-    if not NOTIFY_API_KEY:
+    if not os.getenv("NOTIFY_API_KEY"):
         missing.append("NOTIFY_API_KEY")
 
-    if not NOTIFY_APP_ID:
+    if not os.getenv("NOTIFY_APP_ID"):
         missing.append("NOTIFY_APP_ID")
 
-    if not NOTIFY_BRAND_ID:
+    if not os.getenv("NOTIFY_BRAND_ID"):
         missing.append("NOTIFY_BRAND_ID")
 
-    if not NOTIFY_EMAIL_ENDPOINT:
+    if not os.getenv("NOTIFY_EMAIL_ENDPOINT"):
         missing.append("NOTIFY_EMAIL_ENDPOINT")
 
     if missing:
@@ -44,46 +41,38 @@ def send_email(
     subject,
     body,
 ):
-    """
-    Send an email through ELVA Notify.
-
-    The exact endpoint, headers and payload fields must be
-    filled according to the Notify integration documentation
-    once API access/documentation is received.
-    """
+    """Send an HTML email through ELVA Notify using its configured endpoint."""
 
     validate_notify_config()
-
+    api_key = os.getenv("NOTIFY_API_KEY")
     headers = {
-        # Replace/add these according to the official
-        # Notify integration documentation.
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {NOTIFY_API_KEY}",
     }
 
     payload = {
-        "appId": NOTIFY_APP_ID,
-        "brandId": NOTIFY_BRAND_ID,
-
-        "to": recipient,
-
+        "appId": os.getenv("NOTIFY_APP_ID"),
+        "apiKey": api_key,
+        "brandId": os.getenv("NOTIFY_BRAND_ID"),
+        "channel": "EMAIL",
+        "to": [recipient],
         "subject": subject,
-
-        "body": body,
+        "html": body,
     }
 
     try:
 
         response = requests.post(
-            NOTIFY_EMAIL_ENDPOINT,
+            os.getenv("NOTIFY_EMAIL_ENDPOINT"),
             headers=headers,
             json=payload,
-            timeout=30,
+            timeout=60,
         )
 
         response.raise_for_status()
-
-        return response.json()
+        try:
+            return response.json()
+        except ValueError:
+            return {"status": "sent", "response": response.text}
 
     except requests.RequestException as exc:
 

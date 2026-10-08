@@ -1460,12 +1460,26 @@ if (publishContentButton) {
             'schedule-time'
         );
 
+    const scheduleHitl = document.getElementById('schedule-hitl');
+    const scheduleApprovalPreferences = document.getElementById('schedule-approval-preferences');
+    const scheduleNotifyHours = document.getElementById('schedule-notify-hours');
+    const scheduleUnapprovedAction = document.getElementById('schedule-unapproved-action');
+
 
     if (
         scheduleButton &&
         scheduleModal &&
         scheduleCalendar
     ) {
+
+        const updateScheduleApprovalFields = () => {
+            const enabled = Boolean(scheduleHitl?.checked);
+            if (scheduleApprovalPreferences) scheduleApprovalPreferences.hidden = !enabled;
+            if (scheduleNotifyHours) scheduleNotifyHours.required = enabled;
+            if (scheduleUnapprovedAction) scheduleUnapprovedAction.required = enabled;
+        };
+        scheduleHitl?.addEventListener('change', updateScheduleApprovalFields);
+        updateScheduleApprovalFields();
 
         const monthNames = [
             'January',
@@ -2015,6 +2029,11 @@ if (publishContentButton) {
                 return;
             }
 
+            if (scheduleHitl?.checked && (!scheduleNotifyHours?.value || !scheduleUnapprovedAction?.value)) {
+                setScheduleError('Choose a notification lead time and what to do if you do not respond.');
+                return;
+            }
+
 
             const [
                 hours,
@@ -2102,6 +2121,12 @@ if (publishContentButton) {
 
                                     generation_input:
                                         lastGenerationRequest?.user_input || '',
+
+                                    hitl_required: Boolean(scheduleHitl?.checked),
+
+                                    notify_hours_before: scheduleHitl?.checked ? Number(scheduleNotifyHours.value) : null,
+
+                                    unapproved_action: scheduleHitl?.checked ? scheduleUnapprovedAction.value : null,
 
                                     images:
                                         (window.uploadedImages || []).map((image) => ({
