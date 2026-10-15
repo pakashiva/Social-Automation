@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Used by the RAG evaluation notebook; not needed by the deployed web app.
+deepeval>=4.1.9

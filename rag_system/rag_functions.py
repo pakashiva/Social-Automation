@@ -14,7 +14,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_chroma import Chroma
 
 # models and embeddings
-from model import llm , embeddings
+from model import llm, gemini_embeddings
 
 # Retrieval
 
@@ -125,9 +125,13 @@ def create_vectorstore(chunks: List[Document], COLLECTION_NAME):
 
     vectorstore = Chroma.from_documents(
         documents=chunks,
-        embedding=embeddings,
+        embedding=gemini_embeddings,
         collection_name=COLLECTION_NAME,
-        client=client
+        client=client,
+        collection_metadata={
+            "embedding_provider": "gemini",
+            "embedding_model": "models/gemini-embedding-001",
+        },
     )
 
     print("Created Chroma database")
@@ -136,10 +140,11 @@ def create_vectorstore(chunks: List[Document], COLLECTION_NAME):
 # Load Existing Chroma
 
 def load_vectorstore(COLLECTION_NAME):
+    _migrate_openai_collection_to_gemini(COLLECTION_NAME)
 
     vectorstore = Chroma(
         collection_name=COLLECTION_NAME,
-        embedding_function=embeddings,
+        embedding_function=_embedding_for_collection(COLLECTION_NAME),
         client=client
     )
     return vectorstore
@@ -151,7 +156,7 @@ def build_vector_store(COLLECTION_NAME , PDF_PATH):
 
     vectorstore = Chroma(
         collection_name=COLLECTION_NAME,
-        embedding_function=embeddings,
+        embedding_function=gemini_embeddings,
         client=client
     )
 
@@ -224,6 +229,87 @@ def build_hybrid_retriever(
     )
 
     return hybrid
+
+
+def _embedding_for_collection(collection_name):
+    """Return the embedding model used for newly created/rebuilt collections."""
+    return gemini_embeddings
+
+
+def _migrate_openai_collection_to_gemini(collection_name):
+    """Re-embed old OpenAI-indexed collection text with Gemini, without OpenAI."""
+    collection_name = str(collection_name)
+    suffix = "__gemini_migration"
+    staging_name = f"{collection_name[:63 - len(suffix)]}{suffix}"
+
+    try:
+        collection = client.get_collection(name=collection_name)
+    except Exception:
+        # Recover if a prior migration created the staged collection but stopped
+        # after removing the original and before renaming the staged collection.
+        try:
+            staged = client.get_collection(name=staging_name)
+            if (staged.metadata or {}).get("embedding_provider") == "gemini":
+                staged.modify(name=collection_name)
+        except Exception:
+            pass
+        return
+
+    metadata = collection.metadata or {}
+    if metadata.get("embedding_provider") != "openai":
+        return
+
+    stored = collection.get(include=["documents", "metadatas"])
+    documents = stored.get("documents") or []
+    metadatas = stored.get("metadatas") or []
+    ids = stored.get("ids") or []
+    nonempty_indexes = [index for index, text in enumerate(documents) if text]
+    chunks = [
+        Document(
+            page_content=documents[index],
+            metadata=metadatas[index] if index < len(metadatas) and metadatas[index] else {},
+        )
+        for index in nonempty_indexes
+    ]
+
+    if not chunks:
+        collection.modify(metadata={
+            **metadata,
+            "embedding_provider": "gemini",
+            "embedding_model": "models/gemini-embedding-001",
+        })
+        return
+    if len(ids) != len(documents):
+        raise RuntimeError(
+            f"Cannot safely migrate Chroma collection {collection_name}: stored IDs do not match documents."
+        )
+    chunk_ids = [ids[index] for index in nonempty_indexes]
+
+    try:
+        client.delete_collection(name=staging_name)
+    except Exception:
+        pass
+
+    staged_vectorstore = Chroma.from_documents(
+        documents=chunks,
+        embedding=gemini_embeddings,
+        collection_name=staging_name,
+        client=client,
+        ids=chunk_ids,
+        collection_metadata={
+            **metadata,
+            "embedding_provider": "gemini",
+            "embedding_model": "models/gemini-embedding-001",
+        },
+    )
+    if staged_vectorstore._collection.count() != len(chunks):
+        raise RuntimeError(
+            f"Gemini re-indexing did not finish for Chroma collection {collection_name}."
+        )
+
+    # Build and verify the new-dimensional vectors before swapping collections.
+    client.delete_collection(name=collection_name)
+    client.get_collection(name=staging_name).modify(name=collection_name)
 
 # Multi Query Retriever
 
@@ -302,10 +388,11 @@ def create_semantic_retriever(vectorstore:Chroma):
 def retrieve_semantic_chunks(pillar, user_id):
 
     # Open the Chroma collection belonging to this user
+    _migrate_openai_collection_to_gemini(str(user_id))
 
     vectorstore = Chroma(
         collection_name=str(user_id),
-        embedding_function=embeddings,
+        embedding_function=_embedding_for_collection(str(user_id)),
         client=client
     )
 
