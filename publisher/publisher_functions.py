@@ -1,14 +1,16 @@
 from app import db , app
 import json
 import time
+import mimetypes
+import os
 import requests
 from initialize_database.models import PublishedPost , Account
 from app import app, db
 
 LINKEDIN_VERSION = "202604"
 
-def publish_to_facebook(message, user_id, image_url=None, image_urls=None):
-    image_urls = image_urls or ([image_url] if image_url else [])
+def publish_to_facebook(message, user_id, image_paths=None):
+    image_paths = image_paths or []
     with app.app_context():
         account = Account.query.filter_by(user_id=user_id).first()
         if not account:
@@ -21,7 +23,7 @@ def publish_to_facebook(message, user_id, image_url=None, image_urls=None):
     if not page_access_token:
         raise ValueError("Facebook PAGE_ACCESS_TOKEN is missing")
 
-    if not image_urls:
+    if not image_paths:
         response = requests.post(
             f"https://graph.facebook.com/v23.0/{page_id}/feed",
             data={"message": message, "access_token": page_access_token},
@@ -30,32 +32,31 @@ def publish_to_facebook(message, user_id, image_url=None, image_urls=None):
         response.raise_for_status()
         return response.json()
 
-    if len(image_urls) == 1:
-        response = requests.post(
-            f"https://graph.facebook.com/v23.0/{page_id}/photos",
-            data={
-                "url": image_urls[0],
-                "caption": message,
-                "access_token": page_access_token,
-            },
-            timeout=60
-        )
+    def upload_photo(image_path, *, caption=None, published=True):
+        if not os.path.isfile(image_path):
+            raise FileNotFoundError(f"Facebook image file not found: {image_path}")
+
+        content_type = mimetypes.guess_type(image_path)[0] or "application/octet-stream"
+        with open(image_path, "rb") as image_file:
+            response = requests.post(
+                f"https://graph.facebook.com/v23.0/{page_id}/photos",
+                data={
+                    "access_token": page_access_token,
+                    "published": str(published).lower(),
+                    **({"caption": caption} if caption is not None else {}),
+                },
+                files={"source": (os.path.basename(image_path), image_file, content_type)},
+                timeout=120,
+            )
         response.raise_for_status()
         return response.json()
 
+    if len(image_paths) == 1:
+        return upload_photo(image_paths[0], caption=message)
+
     photo_ids = []
-    for image_url in image_urls:
-        upload_response = requests.post(
-            f"https://graph.facebook.com/v23.0/{page_id}/photos",
-            data={
-                "url": image_url,
-                "published": "false",
-                "access_token": page_access_token,
-            },
-            timeout=60
-        )
-        upload_response.raise_for_status()
-        photo_id = upload_response.json().get("id")
+    for image_path in image_paths:
+        photo_id = upload_photo(image_path, published=False).get("id")
         if not photo_id:
             raise RuntimeError("Facebook did not return an uploaded photo ID.")
         photo_ids.append(photo_id)

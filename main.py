@@ -1453,7 +1453,7 @@ def publish_content():
             publish_to_facebook(
                 message=content,
                 user_id=user_id,
-                image_urls=image_urls
+                image_paths=image_paths
             )
 
         elif platform == "instagram":

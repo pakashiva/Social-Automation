@@ -554,7 +554,7 @@ def publish_due_recurring_posts():
                 if isinstance(image, dict) and image.get("image_url")
             ]
 
-            if not image_urls and post.image_filename:
+            if not image_urls and post.image_filename and post.platform == "instagram":
 
                 public_base_url = os.getenv(
                     "PUBLIC_BASE_URL"
@@ -590,10 +590,20 @@ def publish_due_recurring_posts():
 
             if post.platform == "facebook":
 
+                facebook_image_paths = [
+                    str(BASE_DIR / "static" / "scheduled_uploads" / image["filename"])
+                    for image in (post.images or [])
+                    if isinstance(image, dict) and image.get("filename")
+                ]
+                if not facebook_image_paths and post.image_path:
+                    facebook_image_paths = [post.image_path]
+                elif not facebook_image_paths and post.image_filename:
+                    facebook_image_paths = [str(SCHEDULED_UPLOAD_FOLDER / post.image_filename)]
+
                 publish_to_facebook(
                     message=post.post_content,
                     user_id=post.user_id,
-                    image_urls=image_urls
+                    image_paths=facebook_image_paths
                 )
 
             elif post.platform == "instagram":
@@ -741,7 +751,7 @@ def publish_due_content_jobs():
                 publish_to_facebook(
                     message=job.post_content,
                     user_id=job.user_id,
-                    image_urls=image_urls
+                    image_paths=image_paths
                 )
             elif job.platform == "instagram":
                 publish_to_instagram(
