@@ -103,16 +103,19 @@ def inject_auth_status():
 
 @app.after_request
 def refresh_page_session(response):
-    """Renew the 15-day JWT when an authenticated HTML page is visited."""
+    """Renew the five-day JWT when an authenticated HTML page is visited."""
     if request.method != "GET" or response.mimetype != "text/html" or request.path.startswith("/static/"):
+        return response
+    if request.endpoint == "logout":
         return response
     try:
         verify_jwt_in_request(optional=True)
         user_id = get_jwt_identity()
         if user_id:
-            refreshed = create_access_token(identity=user_id, expires_delta=timedelta(days=15))
+            session_duration = app.config["JWT_ACCESS_TOKEN_EXPIRES"]
+            refreshed = create_access_token(identity=user_id, expires_delta=session_duration)
             response.set_cookie(
-                "access_token", refreshed, max_age=15 * 24 * 60 * 60,
+                "access_token", refreshed, max_age=int(session_duration.total_seconds()),
                 httponly=True, secure=False, samesite="Lax"
             )
     except Exception:
@@ -373,7 +376,7 @@ def login():
 
         access_token = create_access_token(
             identity=user.user_id,
-            expires_delta=timedelta(days=15)
+            expires_delta=app.config["JWT_ACCESS_TOKEN_EXPIRES"]
         )
 
         response = make_response(
@@ -385,7 +388,7 @@ def login():
         response.set_cookie(
             "access_token",
             access_token,
-            max_age=15 * 24 * 60 * 60,
+            max_age=int(app.config["JWT_ACCESS_TOKEN_EXPIRES"].total_seconds()),
             httponly=True,
             secure=False,      # True in production (HTTPS)
             samesite="Lax"
@@ -779,7 +782,7 @@ def save_company_info():
 @app.route("/logout", methods=["POST", "GET"])
 def logout():
 
-    response = redirect(url_for("home"))
+    response = redirect(url_for("login"))
     unset_jwt_cookies(response)
     flash("You have been logged out successfully.", "success")
     return response
