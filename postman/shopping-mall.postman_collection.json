@@ -1,0 +1,31 @@
+{
+  "info": {
+    "name": "Shopping Mall Management System",
+    "description": "Form posts for the mall application. Send the CSRF token from the login page on every POST. Payment is simulated and rejects card field names.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8080"}
+  ],
+  "item": [
+    {"name": "Home", "request": {"method": "GET", "url": "{{baseUrl}}/"}},
+    {"name": "Shops", "request": {"method": "GET", "url": "{{baseUrl}}/shops"}},
+    {"name": "Products", "request": {"method": "GET", "url": "{{baseUrl}}/products"}},
+    {"name": "Categories", "request": {"method": "GET", "url": "{{baseUrl}}/categories"}},
+    {"name": "Offers", "request": {"method": "GET", "url": "{{baseUrl}}/offers"}},
+    {"name": "Contact page", "request": {"method": "GET", "url": "{{baseUrl}}/contact"}},
+    {"name": "Login page", "request": {"method": "GET", "url": "{{baseUrl}}/login"}},
+    {"name": "Register page", "request": {"method": "GET", "url": "{{baseUrl}}/register"}},
+    {"name": "Sign in", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}], "body": {"mode": "urlencoded", "urlencoded": [{"key": "username", "value": "customer.riya@mall.local"}, {"key": "password", "value": ""}, {"key": "_csrf", "value": ""}]}, "url": "{{baseUrl}}/login"}},
+    {"name": "Register customer", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}], "body": {"mode": "urlencoded", "urlencoded": [{"key": "accountType", "value": "CUSTOMER"}, {"key": "fullName", "value": "New Shopper"}, {"key": "email", "value": "new.shopper@mall.local"}, {"key": "mobile", "value": "9000000099"}, {"key": "password", "value": ""}, {"key": "confirmPassword", "value": ""}, {"key": "_csrf", "value": ""}]}, "url": "{{baseUrl}}/register"}},
+    {"name": "Customer dashboard", "request": {"method": "GET", "url": "{{baseUrl}}/customer/dashboard"}},
+    {"name": "Cart", "request": {"method": "GET", "url": "{{baseUrl}}/customer/cart"}},
+    {"name": "Checkout", "request": {"method": "GET", "url": "{{baseUrl}}/customer/checkout"}},
+    {"name": "Orders", "request": {"method": "GET", "url": "{{baseUrl}}/customer/orders"}},
+    {"name": "Owner dashboard", "request": {"method": "GET", "url": "{{baseUrl}}/owner/dashboard"}},
+    {"name": "Admin dashboard", "request": {"method": "GET", "url": "{{baseUrl}}/admin/dashboard"}},
+    {"name": "Admin shops", "request": {"method": "GET", "url": "{{baseUrl}}/admin/shops"}},
+    {"name": "Admin users", "request": {"method": "GET", "url": "{{baseUrl}}/admin/users"}},
+    {"name": "Logout", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}], "body": {"mode": "urlencoded", "urlencoded": [{"key": "_csrf", "value": ""}]}, "url": "{{baseUrl}}/logout"}}
+  ]
+}
