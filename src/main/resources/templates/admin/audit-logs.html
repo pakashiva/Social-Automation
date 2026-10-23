@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Audit logs</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Audit logs</h1>
+
+<form method="get"><input name="action" th:value="${action}" placeholder="Action"/><input name="actor" th:value="${actor}" placeholder="Actor id"/><button type="submit">Filter</button></form>
+<div th:if="${logs.empty and !filtered}" th:replace="~{fragments/empty-state :: empty('No activity has been recorded.', @{/admin/dashboard}, 'Dashboard')}"></div>
+<div th:if="${logs.empty and filtered}" th:replace="~{fragments/empty-state :: empty('No activity matches this filter.', @{/admin/audit-logs}, 'Clear filter')}"></div>
+<table class="table"><tr th:each="log : ${logs.content}"><td th:text="${log.createdAt}"></td><td th:text="${log.actor}"></td><td th:text="${log.action}"></td><td th:text="${log.summary}"></td></tr></table>
+<nav th:replace="~{fragments/pagination :: pager(${logs})}"></nav>
+
+</section>
+</body>
+</html>

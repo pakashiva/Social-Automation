@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Complaint</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Complaint</h1>
+
+<p th:text="${complaint.complaintNumber} + ' · ' + ${complaint.status}"></p>
+<p th:text="${complaint.subject}"></p>
+<p th:text="${complaint.description}"></p>
+<p th:if="${complaint.resolutionNote != null}" th:text="${complaint.resolutionNote}"></p>
+
+</section>
+</body>
+</html>

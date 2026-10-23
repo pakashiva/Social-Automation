@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Shops</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Shops</h1>
+
+<table class="table"><tr th:each="shop : ${shops.content}"><td><a th:href="@{/admin/shops/{id}(id=${shop.id})}" th:text="${shop.name}"></a></td><td th:text="${shop.status}"></td><td th:text="${shop.approvalStatus}"></td></tr></table>
+
+</section>
+</body>
+</html>

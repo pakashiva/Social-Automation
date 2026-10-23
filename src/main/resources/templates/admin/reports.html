@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Reports</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Reports</h1>
+
+<form method="get">
+  <input type="date" name="from" th:value="${from}"/>
+  <input type="date" name="to" th:value="${to}"/>
+  <input name="shopId" th:value="${shopId}" placeholder="Shop id"/>
+  <input name="orderStatus" th:value="${orderStatus}"/>
+  <button type="submit">Filter</button>
+</form>
+<p th:text="'Success ' + ${report.successTotal} + ' · Refunded ' + ${report.refundedTotal} + ' · Net ' + ${report.netTotal}"></p>
+<div th:if="${report.empty}" th:replace="~{fragments/empty-state :: empty('No records in this range.', @{/admin/reports}, 'Clear filter')}"></div>
+<canvas id="adminReport"></canvas>
+<table class="table"><tr th:each="row : ${report.sales}"><td th:text="${row['orderNumber']}"></td><td th:text="${row['shop']}"></td><td th:text="${row['customer']}"></td><td th:text="${row['orderStatus']}"></td><td th:text="${row['paymentStatus']}"></td><td th:text="${row['total']}"></td></tr></table>
+<h2>Stock</h2>
+<table class="table"><tr th:each="row : ${report.stock}"><td th:text="${row['sku']}"></td><td th:text="${row['onHand']}"></td></tr></table>
+<h2>Coupons</h2>
+<table class="table"><tr th:each="row : ${report.coupons}"><td th:text="${row['code']}"></td><td th:text="${row['usageCount']}"></td><td th:text="${row['discountSum']}"></td></tr></table>
+<h2>Parking</h2>
+<table class="table"><tr th:each="row : ${report.parking}"><td th:text="${row['ticket']}"></td><td th:text="${row['charged']}"></td></tr></table>
+<h2>Attendance</h2>
+<table class="table"><tr th:each="row : ${report.attendance}"><td th:text="${row['employee']}"></td><td th:text="${row['count']}"></td></tr></table>
+<script th:inline="javascript">document.addEventListener('DOMContentLoaded', function () { drawChart('adminReport', /*[[@{/admin/reports/sales.json}]]*/ '', 'line'); });</script>
+
+</section>
+</body>
+</html>

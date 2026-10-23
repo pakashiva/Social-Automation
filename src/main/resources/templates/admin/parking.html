@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Parking</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Parking</h1>
+
+<h2>Rates</h2>
+<article th:each="rate : ${board.rates}">
+  <form th:action="@{/admin/parking/rates/{type}(type=${rate.vehicleType})}" method="post">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+    <strong th:text="${rate.vehicleType}"></strong>
+    <input name="graceMinutes" type="number" th:value="${rate.graceMinutes}"/>
+    <input name="hourlyRate" th:value="${rate.hourlyRate}"/>
+    <input name="dailyCap" th:value="${rate.dailyCap}"/>
+    <button type="submit">Save rate</button>
+  </form>
+</article>
+<h2>Enter</h2>
+<form th:action="@{/admin/parking/sessions}" method="post">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <select name="slotId"><option th:each="slot : ${board.slots}" th:value="${slot.id}" th:text="${slot.slotCode} + ' ' + ${slot.status}"></option></select>
+  <input name="vehicleNumber" placeholder="KA01AB1234"/>
+  <select name="vehicleType"><option>CAR</option><option>BIKE</option></select>
+  <button type="submit">Enter</button>
+</form>
+<h2>Open sessions</h2>
+<article th:each="openSession : ${board.openSessions}">
+  <span th:text="${openSession.ticketNumber} + ' ' + ${openSession.vehicleNumber}"></span>
+  <form th:action="@{/admin/parking/sessions/{n}/exit(n=${openSession.ticketNumber})}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><button type="submit">Exit</button></form>
+  <form th:action="@{/admin/parking/sessions/{n}/void(n=${openSession.ticketNumber})}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><button type="submit">Void</button></form>
+</article>
+<h2>Slots</h2>
+<article th:each="slot : ${board.slots}">
+  <span th:text="${slot.slotCode} + ' ' + ${slot.vehicleType} + ' ' + ${slot.status}"></span>
+  <form th:action="@{/admin/parking/slots/{id}/status(id=${slot.id})}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><select name="status"><option>AVAILABLE</option><option>OUT_OF_SERVICE</option></select><button type="submit">Update</button></form>
+</article>
+
+</section>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Checkout</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Checkout</h1>
+
+<p th:if="${!cart.addressComplete}">Add an address to your profile before checkout.</p>
+<table class="table">
+  <tr th:each="line : ${cart.lines}"><td th:text="${line.productName}"></td><td th:text="${line.quantity}"></td><td th:text="${line.lineTotal}"></td></tr>
+</table>
+<p th:text="'Subtotal ' + ${cart.subtotal}"></p>
+<p th:text="'Discount ' + ${cart.discount}"></p>
+<p th:text="'Tax ' + ${cart.tax}"></p>
+<p th:text="'Total ' + ${cart.total}"></p>
+<form method="get" th:action="@{/customer/checkout}">
+  <label>Coupon <input name="couponCode" th:value="${couponCode}"/></label>
+  <button type="submit">Preview coupon</button>
+</form>
+<form th:action="@{/customer/checkout}" method="post">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <input type="hidden" name="checkoutToken" th:value="${checkoutToken}"/>
+  <input type="hidden" name="couponCode" th:value="${couponCode}"/>
+  <label>Note <input name="customerNote" maxlength="500"/></label>
+  <button class="btn btn-mall" type="submit" th:disabled="${!cart.addressComplete or #lists.isEmpty(cart.lines)}">Place order</button>
+</form>
+
+</section>
+</body>
+</html>

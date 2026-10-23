@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Profile</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Profile</h1>
+
+<form th:action="@{/customer/profile}" th:object="${form}" method="post">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <div th:if="${#fields.hasErrors('*')}" class="alert alert-danger"><p th:each="err : ${#fields.errors('*')}" th:text="${err}"></p></div>
+  <label>Name <input th:field="*{fullName}"/></label>
+  <p>Email <span th:text="*{email}"></span></p>
+  <p>Mobile <span th:text="*{mobile}"></span></p>
+  <label>Gender <select th:field="*{gender}"><option value="">—</option><option th:each="g : ${T(com.shoppingmall.enums.Gender).values()}" th:value="${g}" th:text="${g}"></option></select></label>
+  <label>Date of birth <input th:field="*{dateOfBirth}" type="date"/></label>
+  <label>Address <input th:field="*{addressLine1}"/></label>
+  <label>Address 2 <input th:field="*{addressLine2}"/></label>
+  <label>City <input th:field="*{city}"/></label>
+  <label>State <input th:field="*{state}"/></label>
+  <label>Postal code <input th:field="*{postalCode}"/></label>
+  <label>Country <input th:field="*{country}"/></label>
+  <button class="btn btn-mall" type="submit">Save profile</button>
+</form>
+<form th:action="@{/customer/profile/password}" th:object="${passwordForm}" method="post">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <h2>Change password</h2>
+  <label>Current <input th:field="*{currentPassword}" type="password"/></label>
+  <label>New <input th:field="*{newPassword}" type="password"/></label>
+  <label>Confirm <input th:field="*{confirmPassword}" type="password"/></label>
+  <button class="btn btn-outline-secondary" type="submit">Change password</button>
+</form>
+
+</section>
+</body>
+</html>

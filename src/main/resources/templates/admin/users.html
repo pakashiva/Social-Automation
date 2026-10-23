@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Users</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Users</h1>
+
+<form method="get"><input name="q" th:value="${q}"/><button type="submit">Search</button></form>
+<table class="table"><tr th:each="user : ${users.content}"><td><a th:href="@{/admin/users/{id}(id=${user.id})}" th:text="${user.fullName}"></a></td><td th:text="${user.email}"></td><td th:text="${user.role}"></td><td th:text="${user.status}"></td></tr></table>
+<nav th:replace="~{fragments/pagination :: pager(${users})}"></nav>
+
+</section>
+</body>
+</html>

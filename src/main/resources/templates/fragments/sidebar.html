@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<aside class="mall-sidebar" th:fragment="sidebar">
+    <div sec:authorize="hasRole('CUSTOMER')">
+        <a th:href="@{/customer/dashboard}">Dashboard</a>
+        <a th:href="@{/customer/profile}">Profile</a>
+        <a th:href="@{/customer/cart}">Cart</a>
+        <a th:href="@{/customer/orders}">Orders</a>
+        <a th:href="@{/customer/wishlist}">Wishlist</a>
+        <a th:href="@{/customer/invoices}">Invoices</a>
+        <a th:href="@{/customer/complaints}">Complaints</a>
+        <a th:href="@{/customer/feedback}">Feedback</a>
+        <a th:href="@{/customer/notifications}">Notifications</a>
+    </div>
+    <div sec:authorize="hasRole('SHOP_OWNER')">
+        <a th:href="@{/owner/dashboard}">Dashboard</a>
+        <a th:href="@{/owner/shop-profile}">Shop profile</a>
+        <a th:href="@{/owner/products}">Products</a>
+        <a th:href="@{/owner/products/new}">Add product</a>
+        <a th:href="@{/owner/inventory}">Inventory</a>
+        <a th:href="@{/owner/orders}">Orders</a>
+        <a th:href="@{/owner/offers}">Offers</a>
+        <a th:href="@{/owner/reports}">Reports</a>
+        <a th:href="@{/owner/notifications}">Notifications</a>
+    </div>
+    <div sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/admin/dashboard}">Dashboard</a>
+        <a th:href="@{/admin/users}">Users</a>
+        <a th:href="@{/admin/shops}">Shops</a>
+        <a th:href="@{/admin/products}">Products</a>
+        <a th:href="@{/admin/categories}">Categories</a>
+        <a th:href="@{/admin/orders}">Orders</a>
+        <a th:href="@{/admin/payments}">Payments</a>
+        <a th:href="@{/admin/coupons}">Coupons</a>
+        <a th:href="@{/admin/customers}">Customers</a>
+        <a th:href="@{/admin/staff}">Staff</a>
+        <a th:href="@{/admin/attendance}">Attendance</a>
+        <a th:href="@{/admin/salaries}">Salaries</a>
+        <a th:href="@{/admin/parking}">Parking</a>
+        <a th:href="@{/admin/complaints}">Complaints</a>
+        <a th:href="@{/admin/reports}">Reports</a>
+        <a th:href="@{/admin/notifications}">Notifications</a>
+        <a th:href="@{/admin/roles}">Roles</a>
+        <a th:href="@{/admin/audit-logs}">Audit logs</a>
+        <a th:href="@{/admin/settings}">Settings</a>
+    </div>
+</aside>
+</body>
+</html>

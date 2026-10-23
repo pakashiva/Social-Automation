@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="alerts">
+    <div class="alert alert-success" th:if="${success}" th:text="${success}"></div>
+    <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+    <div class="alert alert-danger" th:if="${loginError}" th:text="${loginError}"></div>
+    <div class="alert alert-success" th:if="${param.logout}">You have logged out.</div>
+    <div class="alert alert-success" th:if="${param.registered}">Account created. Sign in to continue.</div>
+    <div class="alert alert-info" th:if="${param.pending}">Your shop-owner account is waiting for admin approval.</div>
+    <div class="alert alert-success" th:if="${param.reset}">Password updated. Sign in with the new password.</div>
+    <div class="alert alert-info" th:if="${param.sent}">If an active account exists for that email, a reset link was issued.</div>
+</div>
+</body>
+</html>

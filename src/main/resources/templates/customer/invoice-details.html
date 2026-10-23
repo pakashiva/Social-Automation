@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Invoice</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Invoice</h1>
+
+<p th:text="${invoice.invoiceNumber}"></p>
+<p th:text="${invoice.billedName}"></p>
+<p th:text="${invoice.billedAddress}"></p>
+<p th:text="'Order ' + ${invoice.orderNumber}"></p>
+<table class="table"><tr th:each="line : ${invoice.lines}"><td th:text="${line.productName}"></td><td th:text="${line.lineTotal}"></td></tr></table>
+<p th:text="'Total ' + ${invoice.total}"></p>
+
+</section>
+</body>
+</html>

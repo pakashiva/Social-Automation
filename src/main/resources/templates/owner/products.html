@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Products</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Products</h1>
+
+<p><a th:href="@{/owner/products/new}">Add product</a></p>
+<table class="table"><tr th:each="product : ${products.content}"><td th:text="${product.sku}"></td><td><a th:href="@{/owner/products/{id}/edit(id=${product.id})}" th:text="${product.name}"></a></td><td th:text="${product.status}"></td><td th:text="${product.stock}"></td></tr></table>
+<nav th:replace="~{fragments/pagination :: pager(${products})}"></nav>
+
+</section>
+</body>
+</html>

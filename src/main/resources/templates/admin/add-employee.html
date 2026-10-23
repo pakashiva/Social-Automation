@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Add employee</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Add employee</h1>
+
+<form th:action="@{/admin/staff}" th:object="${form}" method="post">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <div th:if="${#fields.hasErrors('*')}" class="alert alert-danger"><p th:each="err : ${#fields.errors('*')}" th:text="${err}"></p></div>
+  <label>Name <input th:field="*{fullName}"/></label>
+  <label>Email <input th:field="*{email}"/></label>
+  <label>Mobile <input th:field="*{mobile}"/></label>
+  <label>Title <input th:field="*{jobTitle}"/></label>
+  <label>Department <select th:field="*{department}"><option th:each="d : ${T(com.shoppingmall.enums.EmployeeDepartment).values()}" th:value="${d}" th:text="${d}"></option></select></label>
+  <label>Hired <input th:field="*{hiredOn}" type="date"/></label>
+  <label>Monthly salary <input th:field="*{monthlySalary}"/></label>
+  <button type="submit">Save employee</button>
+</form>
+
+</section>
+</body>
+</html>

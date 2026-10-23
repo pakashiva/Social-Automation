@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Order</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Order</h1>
+
+<p th:text="${order.orderNumber} + ' · ' + ${order.shopName} + ' · ' + ${order.status}"></p>
+<p th:text="'Payment ' + ${order.paymentStatus}"></p>
+<table class="table">
+  <tr th:each="line : ${order.lines}">
+    <td th:text="${line.productName}"></td><td th:text="${line.quantity}"></td><td th:text="${line.lineTotal}"></td>
+    <td th:if="${line.reviewAllowed}">
+      <form th:action="@{/customer/reviews}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="orderItemId" th:value="${line.orderItemId}"/>
+        <input name="rating" type="number" min="1" max="5" required/>
+        <input name="title" required/>
+        <textarea name="body" required></textarea>
+        <button type="submit">Review</button>
+      </form>
+    </td>
+  </tr>
+</table>
+<p th:text="'Total ' + ${order.total}"></p>
+<div class="banner" th:if="${order.payAllowed}">Simulated payment. Nothing is charged. This form does not ask for a card number.</div>
+<form th:if="${order.payAllowed}" th:action="@{/customer/orders/{n}/pay(n=${order.orderNumber})}" method="post">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <button name="outcome" value="SUCCESS" type="submit">Simulate success</button>
+  <button name="outcome" value="DECLINED" type="submit">Simulate decline</button>
+</form>
+<form th:if="${order.customerCancelAllowed}" th:action="@{/customer/orders/{n}/cancel(n=${order.orderNumber})}" method="post">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <label>Reason <input name="cancelReason" required minlength="5"/></label>
+  <button type="submit" data-confirm="Cancel this order?">Cancel order</button>
+</form>
+
+</section>
+</body>
+</html>

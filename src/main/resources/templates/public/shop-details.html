@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Shop</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Shop</h1>
+
+<img th:src="${shop.logoUrl}" alt="" width="160"/>
+<h2 th:text="${shop.name}">Shop</h2>
+<p th:text="${shop.description}"></p>
+<p th:text="${shop.floorLabel} + ' · ' + ${shop.unitNumber}"></p>
+<p th:text="${shop.hours}"></p>
+<p><a th:href="@{/products}">Browse products</a></p>
+
+</section>
+</body>
+</html>
