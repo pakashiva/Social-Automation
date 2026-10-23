@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Complaints</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Complaints</h1>
+
+<table class="table"><tr th:each="row : ${complaints.content}"><td><a th:href="@{/admin/complaints/{n}(n=${row.complaintNumber})}" th:text="${row.complaintNumber}"></a></td><td th:text="${row.subject}"></td><td th:text="${row.status}"></td></tr></table>
+
+</section>
+</body>
+</html>

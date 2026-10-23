@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<nav class="mall-pager" th:fragment="pager(page)" th:if="${page != null and page.totalPages > 1}">
+    <a th:if="${page.hasPrevious()}" th:href="${pageLinks.url(page.number - 1)}">Previous</a>
+    <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
+    <a th:if="${page.hasNext()}" th:href="${pageLinks.url(page.number + 1)}">Next</a>
+</nav>
+</body>
+</html>

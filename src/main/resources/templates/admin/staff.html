@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Staff</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Staff</h1>
+
+<p><a th:href="@{/admin/staff/new}">Add employee</a></p>
+<table class="table"><tr th:each="employee : ${employees.content}"><td th:text="${employee.code}"></td><td th:text="${employee.fullName}"></td><td th:text="${employee.department}"></td><td th:text="${employee.monthlySalary}"></td></tr></table>
+
+</section>
+</body>
+</html>

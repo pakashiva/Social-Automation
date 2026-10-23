@@ -1,0 +1,26 @@
+services:
+  mysql:
+    image: mysql:8.4.13
+    container_name: shopping-mall-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: shopping_mall
+      MYSQL_USER: ${SM_DB_USER:?Set SM_DB_USER}
+      MYSQL_PASSWORD: ${SM_DB_PASSWORD:?Set SM_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${SM_DB_ROOT_PASSWORD:?Set SM_DB_ROOT_PASSWORD}
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - shopping-mall-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  shopping-mall-mysql:

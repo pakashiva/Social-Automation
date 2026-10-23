@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<header class="mall-header" th:fragment="header">
+    <a class="mall-brand" th:href="@{/}" th:text="${mallName} ?: 'Shopping Mall'">Shopping Mall</a>
+    <div class="mall-header-user" sec:authorize="isAuthenticated()">
+        <span th:text="${currentUserName}">Name</span>
+        <a th:href="@{/customer/notifications}" sec:authorize="hasRole('CUSTOMER')" th:text="'Unread ' + ${unreadCount}">Unread</a>
+        <a th:href="@{/owner/notifications}" sec:authorize="hasRole('SHOP_OWNER')" th:text="'Unread ' + ${unreadCount}">Unread</a>
+        <a th:href="@{/admin/notifications}" sec:authorize="hasRole('ADMIN')" th:text="'Unread ' + ${unreadCount}">Unread</a>
+        <form th:action="@{/logout}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn btn-sm btn-outline-light">Log out</button>
+        </form>
+    </div>
+</header>
+</body>
+</html>

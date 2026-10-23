@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="mall-empty" th:fragment="empty(emptyTitle, emptyHref, emptyLinkText)">
+    <p th:text="${emptyTitle}">Nothing here</p>
+    <a th:if="${emptyHref != null and !#strings.isEmpty(emptyHref)}" th:href="${emptyHref}" th:text="${emptyLinkText}">Open</a>
+</div>
+</body>
+</html>

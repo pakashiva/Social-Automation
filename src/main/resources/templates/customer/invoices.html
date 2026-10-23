@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Invoices</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Invoices</h1>
+
+<div th:if="${invoices.empty}" th:replace="~{fragments/empty-state :: empty('You have no invoices yet.', @{/customer/orders}, 'Orders')}"></div>
+<table class="table"><tr th:each="invoice : ${invoices.content}"><td><a th:href="@{/customer/invoices/{n}(n=${invoice.invoiceNumber})}" th:text="${invoice.invoiceNumber}"></a></td><td th:text="${invoice.total}"></td></tr></table>
+<nav th:replace="~{fragments/pagination :: pager(${invoices})}"></nav>
+
+</section>
+</body>
+</html>

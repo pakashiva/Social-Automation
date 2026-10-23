@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Inventory</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Inventory</h1>
+
+<div th:if="${rows.empty}" th:replace="~{fragments/empty-state :: empty('No stock rows.', @{/owner/products}, 'Products')}"></div>
+<table class="table">
+  <tr th:each="row : ${rows.content}">
+    <td th:text="${row.sku}"></td>
+    <td th:text="${row.name}"></td>
+    <td th:text="${row.onHand}"></td>
+    <td th:text="${row.reserved}"></td>
+    <td th:if="${row.lowStock}">Low stock</td>
+    <td>
+      <form th:action="@{/owner/inventory/{id}/adjust(id=${row.productId})}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <select name="movementType"><option>PURCHASE</option><option>DAMAGE</option><option>ADJUSTMENT</option></select>
+        <select name="direction"><option value="">—</option><option>IN</option><option>OUT</option></select>
+        <input name="quantity" type="number" min="1" required/>
+        <input name="note" required minlength="5"/>
+        <button type="submit">Adjust</button>
+      </form>
+    </td>
+  </tr>
+</table>
+
+</section>
+</body>
+</html>

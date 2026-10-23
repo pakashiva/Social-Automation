@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<footer class="mall-footer" th:fragment="footer">
+    <span th:text="${supportEmail} ?: ''">support</span>
+    <span th:text="${supportPhone} ?: ''">phone</span>
+</footer>
+</body>
+</html>

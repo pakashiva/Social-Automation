@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Complaints</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Complaints</h1>
+
+<p><a th:href="@{/customer/complaints/new}">New complaint</a></p>
+<div th:if="${complaints.empty}" th:replace="~{fragments/empty-state :: empty('You have no complaints.', @{/customer/complaints/new}, 'Raise one')}"></div>
+<table class="table"><tr th:each="row : ${complaints.content}"><td><a th:href="@{/customer/complaints/{n}(n=${row.complaintNumber})}" th:text="${row.complaintNumber}"></a></td><td th:text="${row.subject}"></td><td th:text="${row.status}"></td></tr></table>
+
+</section>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">Shopping Mall</title>
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap/bootstrap.min.css}"/>
+    <link rel="stylesheet" th:href="@{/css/mall.css}"/>
+</head>
+<body>
+<div class="mall-shell">
+    <header th:replace="~{fragments/header :: header}"></header>
+    <nav th:replace="~{fragments/nav :: nav}"></nav>
+    <div class="mall-body">
+        <div sec:authorize="isAuthenticated()">
+            <aside th:replace="~{fragments/sidebar :: sidebar}"></aside>
+        </div>
+        <main class="mall-main">
+            <div th:replace="~{fragments/alerts :: alerts}"></div>
+            <section layout:fragment="content"></section>
+        </main>
+    </div>
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
+</div>
+<script th:src="@{/vendor/bootstrap/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/vendor/chartjs/chart.umd.min.js}"></script>
+<script th:src="@{/js/mall.js}"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Shop orders</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Shop orders</h1>
+
+<div th:if="${orders.empty}" th:replace="~{fragments/empty-state :: empty('No orders for your shops.', @{/owner/products}, 'Products')}"></div>
+<table class="table"><tr th:each="order : ${orders.content}"><td><a th:href="@{/owner/orders/{n}(n=${order.orderNumber})}" th:text="${order.orderNumber}"></a></td><td th:text="${order.status}"></td><td th:text="${order.total}"></td></tr></table>
+
+</section>
+</body>
+</html>

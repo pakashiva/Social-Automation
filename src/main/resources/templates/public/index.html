@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Home</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Home</h1>
+
+<div class="mall-grid">
+  <article class="mall-card" th:each="shop : ${shops}">
+    <img th:src="${shop.logoUrl}" alt=""/>
+    <h2><a th:href="@{/shops/{slug}(slug=${shop.slug})}" th:text="${shop.name}">Shop</a></h2>
+    <p th:text="${shop.hours}"></p>
+  </article>
+</div>
+<div class="mall-grid">
+  <article class="mall-card" th:each="product : ${products}">
+    <img th:src="${product.imageUrl}" alt=""/>
+    <h2><a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product</a></h2>
+    <p th:text="${product.priceLabel}"></p>
+  </article>
+</div>
+
+</section>
+</body>
+</html>

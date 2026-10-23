@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Payments</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Payments</h1>
+
+<table class="table"><tr th:each="payment : ${payments.content}"><td th:text="${payment.paymentNumber}"></td><td th:text="${payment.orderNumber}"></td><td th:text="${payment.status}"></td><td th:text="${payment.amount}"></td><td th:text="${payment.method}"></td></tr></table>
+
+</section>
+</body>
+</html>

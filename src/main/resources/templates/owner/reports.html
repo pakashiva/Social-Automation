@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Reports</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Reports</h1>
+
+<form method="get">
+  <input type="date" name="from" th:value="${from}"/>
+  <input type="date" name="to" th:value="${to}"/>
+  <input name="orderStatus" th:value="${orderStatus}" placeholder="Order status"/>
+  <button type="submit">Filter</button>
+</form>
+<div th:if="${report.empty}" th:replace="~{fragments/empty-state :: empty('No records in this range.', @{/owner/reports}, 'Clear filter')}"></div>
+<canvas id="ownerReport"></canvas>
+<table class="table"><tr th:each="row : ${report.sales}"><td th:text="${row['orderNumber']}"></td><td th:text="${row['total']}"></td></tr></table>
+<h2>Top products</h2>
+<table class="table"><tr th:each="row : ${report.topProducts}"><td th:text="${row['name']}"></td><td th:text="${row['quantity']}"></td></tr></table>
+<script th:inline="javascript">document.addEventListener('DOMContentLoaded', function () { drawChart('ownerReport', /*[[@{/owner/reports/sales.json}]]*/ '', 'line'); });</script>
+
+</section>
+</body>
+</html>

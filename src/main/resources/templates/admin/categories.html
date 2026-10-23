@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Categories</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Categories</h1>
+
+<form th:action="@{/admin/categories}" th:object="${form}" method="post">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <label>Name <input th:field="*{name}"/></label>
+  <label>Description <input th:field="*{description}"/></label>
+  <label>Parent id <input th:field="*{parentId}"/></label>
+  <label>Order <input th:field="*{displayOrder}" type="number" value="0"/></label>
+  <label>Active <input type="checkbox" th:field="*{active}"/></label>
+  <button type="submit">Save category</button>
+</form>
+<table class="table"><tr th:each="category : ${categories.content}"><td th:text="${category.name}"></td><td th:text="${category.slug}"></td><td th:text="${category.active}"></td></tr></table>
+
+</section>
+</body>
+</html>

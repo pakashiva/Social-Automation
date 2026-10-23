@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Dashboard</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Dashboard</h1>
+
+<ul>
+  <li th:text="'Cart lines: ' + ${dashboard.counts['cartLines']}"></li>
+  <li th:text="'Wishlist items: ' + ${dashboard.counts['wishlistItems']}"></li>
+  <li th:text="'Unread: ' + ${dashboard.counts['unread']}"></li>
+</ul>
+<p><a th:href="@{/customer/cart}">Cart</a> · <a th:href="@{/customer/orders}">Orders</a> · <a th:href="@{/customer/notifications}">Notifications</a></p>
+<table class="table" th:if="${!dashboard.recentOrders.empty}">
+  <tr th:each="order : ${dashboard.recentOrders}"><td th:text="${order.orderNumber}"></td><td th:text="${order.status}"></td><td th:text="${order.total}"></td></tr>
+</table>
+
+</section>
+</body>
+</html>

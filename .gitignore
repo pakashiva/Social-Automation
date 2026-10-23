@@ -3,3 +3,12 @@ env/
 __pycache__/
 *.py[cod]
 /static/scheduled_posts/
+target/
+mall-uploads/
+*.log
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/

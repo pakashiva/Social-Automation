@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Admin dashboard</title></head>
+<body>
+<section layout:fragment="content">
+<h1>Admin dashboard</h1>
+
+<ul><li th:each="entry : ${dashboard.counts}" th:text="${entry.key} + ': ' + ${entry.value}"></li></ul>
+<canvas id="adminSales"></canvas>
+<h2>Recent activity</h2>
+<ul><li th:each="line : ${dashboard.activity}" th:text="${line}"></li></ul>
+<script th:inline="javascript">document.addEventListener('DOMContentLoaded', function () { drawChart('adminSales', /*[[@{/admin/reports/sales.json}]]*/ '', 'line'); });</script>
+
+</section>
+</body>
+</html>
