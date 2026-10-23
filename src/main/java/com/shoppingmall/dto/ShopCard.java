@@ -15,6 +15,8 @@ public class ShopCard {
     private String unitNumber;
     private String phone;
     private String email;
+    private String openingTime;
+    private String closingTime;
     private String hours;
     private String status;
     private String logoUrl;

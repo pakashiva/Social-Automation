@@ -24,4 +24,6 @@ public interface ProductService {
     void update(long userId, long id, ProductForm form);
 
     void archive(long adminId, long id);
+
+    String imagePath(long productId);
 }

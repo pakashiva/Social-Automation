@@ -21,6 +21,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findFirstByOrderId(Long orderId);
 
+    @Query("select p.order.id, p.status from Payment p where p.order.id in :orderIds")
+    List<Object[]> findStatusByOrderIdIn(@Param("orderIds") Collection<Long> orderIds);
+
     Page<Payment> findAllByOrderByIdDesc(Pageable pageable);
 
     @Query("""

@@ -27,4 +27,6 @@ public interface ShopService {
     List<ShopCard> listForOwner(long userId);
 
     void updateOwn(long userId, long shopId, ShopProfileForm form);
+
+    String logoPath(long shopId);
 }

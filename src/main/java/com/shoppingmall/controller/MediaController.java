@@ -2,8 +2,8 @@ package com.shoppingmall.controller;
 
 import com.shoppingmall.config.UploadProperties;
 import com.shoppingmall.exception.NotFoundException;
-import com.shoppingmall.repository.ProductRepository;
-import com.shoppingmall.repository.ShopRepository;
+import com.shoppingmall.service.ProductService;
+import com.shoppingmall.service.ShopService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.springframework.http.MediaType;
@@ -16,10 +16,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 public class MediaController {
 
     private final UploadProperties uploads;
-    private final ShopRepository shops;
-    private final ProductRepository products;
+    private final ShopService shops;
+    private final ProductService products;
 
-    public MediaController(UploadProperties uploads, ShopRepository shops, ProductRepository products) {
+    public MediaController(UploadProperties uploads, ShopService shops, ProductService products) {
         this.uploads = uploads;
         this.shops = shops;
         this.products = products;
@@ -27,13 +27,13 @@ public class MediaController {
 
     @GetMapping("/media/shops/{shopId}/{file}")
     public ResponseEntity<byte[]> shop(@PathVariable long shopId, @PathVariable String file) {
-        String stored = shops.findById(shopId).map(shop -> shop.getLogoPath()).orElse(null);
+        String stored = shops.logoPath(shopId);
         return bytes(stored, "shops/" + shopId + "/" + file);
     }
 
     @GetMapping("/media/products/{productId}/{file}")
     public ResponseEntity<byte[]> product(@PathVariable long productId, @PathVariable String file) {
-        String stored = products.findById(productId).map(product -> product.getImagePath()).orElse(null);
+        String stored = products.imagePath(productId);
         return bytes(stored, "products/" + productId + "/" + file);
     }
 

@@ -140,6 +140,12 @@ public class ShopServiceImpl implements ShopService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public String logoPath(long shopId) {
+        return shops.findById(shopId).map(Shop::getLogoPath).orElse(null);
+    }
+
+    @Override
     @Transactional
     public void updateOwn(long userId, long shopId, ShopProfileForm form) {
         Shop shop = guard.requireOwnShop(userId, shopId);
@@ -187,6 +193,8 @@ public class ShopServiceImpl implements ShopService {
         card.setUnitNumber(shop.getUnitNumber());
         card.setPhone(shop.getContactPhone());
         card.setEmail(shop.getContactEmail());
+        card.setOpeningTime(shop.getOpeningTime().toString());
+        card.setClosingTime(shop.getClosingTime().toString());
         card.setHours(shop.getOpeningTime() + " to " + shop.getClosingTime());
         card.setStatus(shop.getStatus().name());
         card.setLogoUrl(logoUrl(shop));

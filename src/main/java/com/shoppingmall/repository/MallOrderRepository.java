@@ -27,4 +27,58 @@ public interface MallOrderRepository extends JpaRepository<MallOrder, Long> {
 
     @Query("select o.status, count(o) from MallOrder o group by o.status")
     List<Object[]> countByStatus();
+
+    @Query("""
+            select o from MallOrder o
+            join fetch o.shop
+            join fetch o.customer c
+            join fetch c.user
+            where o.placedAt >= :start and o.placedAt < :end
+            order by o.placedAt asc, o.id asc
+            """)
+    List<MallOrder> findSales(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("""
+            select o from MallOrder o
+            join fetch o.shop
+            join fetch o.customer c
+            join fetch c.user
+            where o.placedAt >= :start and o.placedAt < :end
+              and o.status = :status
+            order by o.placedAt asc, o.id asc
+            """)
+    List<MallOrder> findSalesByStatus(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("status") OrderStatus status);
+
+    @Query("""
+            select o from MallOrder o
+            join fetch o.shop
+            join fetch o.customer c
+            join fetch c.user
+            where o.placedAt >= :start and o.placedAt < :end
+              and o.shop.id in :shopIds
+            order by o.placedAt asc, o.id asc
+            """)
+    List<MallOrder> findSalesForShops(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("shopIds") Collection<Long> shopIds);
+
+    @Query("""
+            select o from MallOrder o
+            join fetch o.shop
+            join fetch o.customer c
+            join fetch c.user
+            where o.placedAt >= :start and o.placedAt < :end
+              and o.shop.id in :shopIds
+              and o.status = :status
+            order by o.placedAt asc, o.id asc
+            """)
+    List<MallOrder> findSalesForShopsAndStatus(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("shopIds") Collection<Long> shopIds,
+            @Param("status") OrderStatus status);
 }

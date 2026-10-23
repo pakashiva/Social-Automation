@@ -229,6 +229,12 @@ public class ProductServiceImpl implements ProductService {
         return card;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public String imagePath(long productId) {
+        return products.findById(productId).map(Product::getImagePath).orElse(null);
+    }
+
     static boolean sellable(Product product) {
         return product.getStatus() == ProductStatus.ACTIVE && product.getShop().getStatus() == ShopStatus.ACTIVE;
     }

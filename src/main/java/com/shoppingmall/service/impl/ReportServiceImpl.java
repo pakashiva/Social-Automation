@@ -7,7 +7,6 @@ import com.shoppingmall.entity.Coupon;
 import com.shoppingmall.entity.Employee;
 import com.shoppingmall.entity.Inventory;
 import com.shoppingmall.entity.MallOrder;
-import com.shoppingmall.entity.OrderItem;
 import com.shoppingmall.entity.ParkingSession;
 import com.shoppingmall.entity.Payment;
 import com.shoppingmall.entity.Shop;
@@ -21,6 +20,7 @@ import com.shoppingmall.repository.CouponRepository;
 import com.shoppingmall.repository.EmployeeRepository;
 import com.shoppingmall.repository.InventoryRepository;
 import com.shoppingmall.repository.MallOrderRepository;
+import com.shoppingmall.repository.OrderItemRepository;
 import com.shoppingmall.repository.ParkingSessionRepository;
 import com.shoppingmall.repository.PaymentRepository;
 import com.shoppingmall.repository.ShopRepository;
@@ -37,11 +37,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +53,7 @@ public class ReportServiceImpl implements ReportService {
     private final OwnershipGuard guard;
     private final ShopRepository shops;
     private final MallOrderRepository orders;
+    private final OrderItemRepository items;
     private final PaymentRepository payments;
     private final InventoryRepository inventories;
     private final CouponRepository coupons;
@@ -66,6 +67,7 @@ public class ReportServiceImpl implements ReportService {
             OwnershipGuard guard,
             ShopRepository shops,
             MallOrderRepository orders,
+            OrderItemRepository items,
             PaymentRepository payments,
             InventoryRepository inventories,
             CouponRepository coupons,
@@ -77,6 +79,7 @@ public class ReportServiceImpl implements ReportService {
         this.guard = guard;
         this.shops = shops;
         this.orders = orders;
+        this.items = items;
         this.payments = payments;
         this.inventories = inventories;
         this.coupons = coupons;
@@ -128,32 +131,22 @@ public class ReportServiceImpl implements ReportService {
 
     private ReportPage sales(List<Long> shopIds, Range range, String orderStatus, boolean admin) {
         ReportPage page = new ReportPage();
-        OrderStatus status = parseStatus(orderStatus);
+        List<MallOrder> found = matchingSales(shopIds, range, parseStatus(orderStatus));
+        Map<Long, PaymentStatus> paymentStatus = paymentStatusByOrder(found);
         List<Map<String, String>> rows = new ArrayList<>();
-        if (shopIds == null || !shopIds.isEmpty()) {
-            for (MallOrder order : orders.findAll()) {
-                if (!inRange(order.getPlacedAt(), range)) {
-                    continue;
-                }
-                if (shopIds != null && !shopIds.contains(order.getShop().getId())) {
-                    continue;
-                }
-                if (status != null && order.getStatus() != status) {
-                    continue;
-                }
-                Payment payment = payments.findFirstByOrderId(order.getId()).orElse(null);
-                Map<String, String> row = new LinkedHashMap<>();
-                row.put("orderNumber", order.getOrderNumber());
-                row.put("shop", order.getShop().getName());
-                row.put("customer", order.getCustomer().getUser().getFullName());
-                row.put("orderStatus", order.getStatus().name());
-                row.put("paymentStatus", payment == null ? "" : payment.getStatus().name());
-                row.put("subtotal", plain(order.getSubtotal()));
-                row.put("discount", plain(order.getDiscountAmount()));
-                row.put("tax", plain(order.getTaxAmount()));
-                row.put("total", plain(order.getTotalAmount()));
-                rows.add(row);
-            }
+        for (MallOrder order : found) {
+            PaymentStatus status = paymentStatus.get(order.getId());
+            Map<String, String> row = new LinkedHashMap<>();
+            row.put("orderNumber", order.getOrderNumber());
+            row.put("shop", order.getShop().getName());
+            row.put("customer", order.getCustomer().getUser().getFullName());
+            row.put("orderStatus", order.getStatus().name());
+            row.put("paymentStatus", status == null ? "" : status.name());
+            row.put("subtotal", plain(order.getSubtotal()));
+            row.put("discount", plain(order.getDiscountAmount()));
+            row.put("tax", plain(order.getTaxAmount()));
+            row.put("total", plain(order.getTotalAmount()));
+            rows.add(row);
         }
         page.setSales(rows);
         page.setEmpty(rows.isEmpty());
@@ -166,6 +159,32 @@ public class ReportServiceImpl implements ReportService {
             return page;
         }
         return page;
+    }
+
+    private List<MallOrder> matchingSales(List<Long> shopIds, Range range, OrderStatus status) {
+        if (shopIds != null && shopIds.isEmpty()) {
+            return List.of();
+        }
+        if (shopIds == null) {
+            return status == null
+                    ? orders.findSales(range.start(), range.end())
+                    : orders.findSalesByStatus(range.start(), range.end(), status);
+        }
+        return status == null
+                ? orders.findSalesForShops(range.start(), range.end(), shopIds)
+                : orders.findSalesForShopsAndStatus(range.start(), range.end(), shopIds, status);
+    }
+
+    private Map<Long, PaymentStatus> paymentStatusByOrder(List<MallOrder> found) {
+        if (found.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = found.stream().map(MallOrder::getId).toList();
+        Map<Long, PaymentStatus> byOrder = new LinkedHashMap<>();
+        for (Object[] row : payments.findStatusByOrderIdIn(ids)) {
+            byOrder.put((Long) row[0], (PaymentStatus) row[1]);
+        }
+        return byOrder;
     }
 
     private BigDecimal money(List<Long> shopIds, Range range, boolean success) {
@@ -258,32 +277,17 @@ public class ReportServiceImpl implements ReportService {
     }
 
     private List<Map<String, String>> topProducts(List<Long> shopIds, Range range) {
-        Map<Long, int[]> qty = new LinkedHashMap<>();
-        Map<Long, String> names = new LinkedHashMap<>();
-        if (!shopIds.isEmpty()) {
-            for (MallOrder order : orders.findAll()) {
-                if (!shopIds.contains(order.getShop().getId()) || !inRange(order.getPlacedAt(), range)) {
-                    continue;
-                }
-                if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.PAYMENT_FAILED) {
-                    continue;
-                }
-                for (OrderItem item : order.getItems()) {
-                    qty.computeIfAbsent(item.getProduct().getId(), id -> new int[1])[0] += item.getQuantity();
-                    names.put(item.getProduct().getId(), item.getProductNameSnapshot());
-                }
-            }
+        if (shopIds.isEmpty()) {
+            return List.of();
         }
-        return qty.entrySet().stream()
-                .sorted(Comparator.<Map.Entry<Long, int[]>>comparingInt(entry -> entry.getValue()[0]).reversed())
-                .limit(5)
-                .map(entry -> {
-                    Map<String, String> row = new LinkedHashMap<>();
-                    row.put("name", names.get(entry.getKey()));
-                    row.put("quantity", Integer.toString(entry.getValue()[0]));
-                    return row;
-                })
-                .toList();
+        List<Map<String, String>> rows = new ArrayList<>();
+        for (Object[] row : items.topByQuantity(shopIds, range.start(), range.end(), PageRequest.of(0, 5))) {
+            Map<String, String> mapped = new LinkedHashMap<>();
+            mapped.put("name", String.valueOf(row[1]));
+            mapped.put("quantity", Long.toString(((Number) row[2]).longValue()));
+            rows.add(mapped);
+        }
+        return rows;
     }
 
     private ChartSeries chart(List<Long> shopIds) {

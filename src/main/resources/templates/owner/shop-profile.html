@@ -13,8 +13,8 @@
     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
     <label>Description <textarea name="description" th:text="${shop.description}"></textarea></label>
     <label>Phone <input name="contactPhone" th:value="${shop.phone}"/></label>
-    <label>Opens <input name="openingTime" type="time" required/></label>
-    <label>Closes <input name="closingTime" type="time" required/></label>
+    <label>Opens <input name="openingTime" type="time" required th:value="${shop.openingTime}"/></label>
+    <label>Closes <input name="closingTime" type="time" required th:value="${shop.closingTime}"/></label>
     <input type="file" name="logo" accept="image/jpeg,image/png,image/webp" data-preview="#logo-name"/>
     <span id="logo-name"></span>
     <button type="submit">Save shop</button>
